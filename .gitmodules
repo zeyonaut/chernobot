@@ -1,0 +1,6 @@
+[submodule "ext/imgui"]
+	path = ext/imgui
+	url = https://github.com/ocornut/imgui
+[submodule "ext/rs232"]
+	path = ext/rs232
+	url = https://github.com/Marzac/rs232
