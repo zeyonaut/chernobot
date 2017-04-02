@@ -1,7 +1,0 @@
-/Users/Home/Desktop/chernobot/tmp/CMakeFiles/install/local.dir
-/Users/Home/Desktop/chernobot/tmp/CMakeFiles/install/strip.dir
-/Users/Home/Desktop/chernobot/tmp/CMakeFiles/install.dir
-/Users/Home/Desktop/chernobot/tmp/CMakeFiles/list_install_components.dir
-/Users/Home/Desktop/chernobot/tmp/CMakeFiles/rebuild_cache.dir
-/Users/Home/Desktop/chernobot/tmp/CMakeFiles/edit_cache.dir
-/Users/Home/Desktop/chernobot/tmp/CMakeFiles/Chernobot.dir

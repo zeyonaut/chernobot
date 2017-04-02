@@ -1,5 +1,7 @@
 #include <imgui.h>
 #include <libserialport.h>
+#include <vector>
+#include <exception>
 
 #include "nimir/graphics.h"
 #include "nimir/gui.h"
@@ -13,11 +15,12 @@
 
 #include <string>
 using std::string;
+using std::vector;
 
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
-#include <rs232.h>
+#include <serial/serial.h>
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
@@ -110,11 +113,25 @@ const char* conv(int num)
     return x.c_str();
 }
 
+const char* conv_norm(int num)
+{
+    if (num > 200) num = 200;
+    if (num < 0) num = 0;
+    int first = num/16;
+    int last = num%16;
+    std::string x(to_hex(first));
+    x.append(to_hex(last));
+    return x.c_str();
+}
+
+
 int main(int, char**)
 {
     GLFWwindow* window = NULL;
     nimir::gl::init(window, 1280, 720, "example");
     nimir::gui::init(window, false);
+    serial::Serial port("");
+    port.setBaudrate(115200);
 
     glfwSetMouseButtonCallback(window, nimir::gui::mouseButtonCallback);
     glfwSetScrollCallback(window, nimir::gui::scrollCallback);
@@ -141,6 +158,9 @@ int main(int, char**)
     int fvert = 0;
     int bvert = 0;
 
+    bool opening = false;
+    bool closing = false;
+    bool pressing_camera = false;
     // Selected Joystick in Combo Box
 
     int variableIndex = -1;
@@ -152,6 +172,9 @@ int main(int, char**)
     // Main loop
 
     // Loading images
+
+    serial::Serial prt("");
+    prt.setBaudrate(115200);
 
     //Main loop
     while (nimir::gl::nextFrame(window))
@@ -174,18 +197,18 @@ int main(int, char**)
 					else {joysticks[i] = "";}
 				}
 
-                int numports = comEnumerate();
-                const char** ports = new const char* [numports];
-                for (int i = 0; i < numports; i++)
+                vector<serial::PortInfo> portinfo = serial::list_ports();
+                const char** ports = new const char* [portinfo.size()];
+                for (int i = 0; i < portinfo.size(); i++)
                 {
-                    ports[i] = comGetPortName(i);
+                    ports[i] = portinfo[i].port.c_str();
                 }
 
                 string output = "";
 
 				if (true)
 				{
-                    ImGui::Combo("Serial Port", &portIndex, ports, numports);
+                    ImGui::Combo("Serial Port", &portIndex, ports, portinfo.size());
 
 					ImGui::Combo("Joystick", &variableIndex, joysticks, GLFW_JOYSTICK_LAST);
 					//inputJoystick[variableIndex] = joystickIndex;
@@ -207,10 +230,19 @@ int main(int, char**)
                             clockwise = (int) (100 *rawAxes[2]);
                         }
 
+                        if (3 < bucount)
+                        {
+                            opening = rawButtons[1] == GLFW_PRESS;
+                            closing = rawButtons[2] == GLFW_PRESS;
+                            pressing_camera = rawButtons[3] == GLFW_PRESS;
+                            if (opening == true && closing == true) opening = closing = false;
+                        }
+
                         ImGui::Text("Forward: %d", forward);
                         ImGui::Text("Right: %d", right);
                         ImGui::Text("Up: %d", up);
                         ImGui::Text("Clockwise: %d", clockwise);
+                        ImGui::Text("Claw State: %s", opening? "Opening" : closing? "Closing" : "Neutral");
 
                         fleft = magnitude(right, forward, fleft_motor);
                         //fleft = (fleft + clockwise)/2;
@@ -223,6 +255,12 @@ int main(int, char**)
                         fvert = up;
                         bvert = up;
 
+			fleft += clockwise;
+			fright -= clockwise;
+			bleft  += clockwise;
+			bright -= clockwise;
+
+
                         ImGui::Text("Forward-Left Motor: %d", fleft);
                         ImGui::Text("Forward-Right Motor: %d", fright);
                         ImGui::Text("Backward-Left Motor: %d", bleft);
@@ -230,18 +268,21 @@ int main(int, char**)
                         ImGui::Text("Forward-Up Motor: %d", fvert);
                         ImGui::Text("Backward-Up Motor: %d", bvert);
 
-                        ImGui::Text("Greatest Result: %d", max);
-
                         output = "T";
 
-                        output.append(conv((int)fleft));//2
-                        output.append(conv((int)fright));//1
-                        output.append(conv((int)bleft));//4
-                        output.append(conv((int)bright));//3
+                        output.append(conv((int)(fright - clockwise)));//1
+                        output.append(conv((int)(fleft + clockwise)));//2
+                        output.append(conv((int)(bright - clockwise)));//3
+                        output.append(conv((int)(bleft + clockwise)));//4
 
-                        output.append(conv((int)fvert));//3
-                        output.append(conv((int)bvert));//3
-                        output.append("000000000000");
+                        output.append(conv((int)fvert));//5
+                        output.append(conv((int)bvert));//6
+                        output.append(opening? conv_norm(200) : closing? conv_norm(0) : conv_norm(100));//7
+                        output.append("00");//8
+                        output.append("00");//9
+                        output.append("00");//10
+                        output.append("00");//11
+                        output.append(pressing_camera? conv_norm(0) :  conv_norm(180));//12
 
 
                         //Left up: Axis 1
@@ -251,16 +292,32 @@ int main(int, char**)
                         //Green: Button 1
                         //Red: Button 2
 					}
-
-                    if (portIndex != -1)
+                    try
                     {
-                        if (!portOpen) comOpen(portIndex, 115200);
-                        comWrite(portIndex, output.c_str(), 25);
+                        if (portIndex != -1)
+                        {
+                            if (!portOpen)
+                            {
+                                portOpen = true;
+                                prt.setPort(portinfo[portIndex].port);
+                                prt.open();
+                            }
+
+                            if (prt.isOpen()) prt.write(output);
+                        }
+                        else
+                        {
+                            portOpen = false;
+                            prt.close();
+                            prt.setPort("");
+                        }
                     }
-                    else
+                    catch (std::exception e)
                     {
                         portOpen = false;
-                        comCloseAll();
+                        prt.close();
+                        prt.setPort("");
+                        portIndex = -1;
                     }
 
 				}

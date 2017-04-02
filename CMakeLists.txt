@@ -27,7 +27,7 @@ include_directories(${Boost_INCLUDE_DIR})
 include_directories(${GLFW_INCLUDE_DIR})
 include_directories(${Chernobot_SOURCE_DIR}/ext/glad/include)
 include_directories(${Chernobot_SOURCE_DIR}/ext/imgui)
-include_directories(${Chernobot_SOURCE_DIR}/ext/rs232)
+include_directories(${Chernobot_SOURCE_DIR}/ext/serial/include)
 
 add_executable(Chernobot src/main.cpp)
 
@@ -37,9 +37,11 @@ file(GLOB Nimir_SRC "src/nimir/*.cpp")
 target_sources(Chernobot PUBLIC ${Nimir_SRC})
 file(GLOB Imgui_SRC "ext/imgui/*.cpp")
 target_sources(Chernobot PUBLIC ${Imgui_SRC})
-file(GLOB Rs232_SRC "ext/rs232/*.c")
-target_sources(Chernobot PUBLIC ${Rs232_SRC})
+
+file(GLOB_RECURSE Serial_SRC "ext/serial/src/*.cc")
+target_sources(Chernobot PUBLIC ${Serial_SRC})
 target_sources(Chernobot PUBLIC ${Chernobot_SOURCE_DIR}/ext/glad/src/glad.c)
+
 target_link_libraries(Chernobot ${GLFW_LIBRARIES})
 
 install(TARGETS Chernobot RUNTIME DESTINATION ${BIN_DIR})
