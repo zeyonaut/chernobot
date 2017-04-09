@@ -268,21 +268,30 @@ int main(int, char**)
                         ImGui::Text("Forward-Up Motor: %d", fvert);
                         ImGui::Text("Backward-Up Motor: %d", bvert);
 
+                        ImGui::Text(pressing_camera? "Noob" : "Boon");
+
                         output = "T";
 
-                        output.append(conv((int)(fright - clockwise)));//1
-                        output.append(conv((int)(fleft + clockwise)));//2
-                        output.append(conv((int)(bright - clockwise)));//3
-                        output.append(conv((int)(bleft + clockwise)));//4
+                        output.append(conv((int)(fright - clockwise)));//2
+                        output.append(conv((int)(fleft + clockwise)));//3
+                        output.append(conv((int)(bright - clockwise)));//4
+                        output.append(conv((int)(bleft + clockwise)));//5
 
-                        output.append(conv((int)fvert));//5
-                        output.append(conv((int)bvert));//6
-                        output.append(opening? conv_norm(200) : closing? conv_norm(0) : conv_norm(100));//7
-                        output.append("00");//8
-                        output.append("00");//9
-                        output.append("00");//10
-                        output.append("00");//11
-                        output.append(pressing_camera? conv_norm(0) :  conv_norm(180));//12
+                        output.append(conv((int)fvert));//6
+                        output.append(conv((int)bvert));//7
+
+                        std::string camout = pressing_camera? conv_norm(0) :  conv_norm(180);
+
+                        output.append(opening? conv_norm(200) : closing? conv_norm(0) : conv_norm(100));//8
+                        output.append(opening? conv_norm(200) : closing? conv_norm(0) : conv_norm(100));//9
+                        output.append(opening? conv_norm(200) : closing? conv_norm(0) : conv_norm(100));//10
+                        output.append(opening? conv_norm(200) : closing? conv_norm(0) : conv_norm(100));//11
+                        output.append(camout);
+                        output.append(opening? conv_norm(200) : closing? conv_norm(0) : conv_norm(100));//12
+
+                        printf(output.c_str());
+                        printf("\n");
+
 
 
                         //Left up: Axis 1
