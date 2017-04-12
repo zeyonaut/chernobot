@@ -5,6 +5,9 @@
 
 #include "nimir/graphics.h"
 #include "nimir/gui.h"
+#include <iostream>
+#include <chrono>
+using namespace std::chrono;
 
 /*extern "C" {
 #include <libavdevice/avdevice.h>
@@ -255,10 +258,10 @@ int main(int, char**)
                         fvert = up;
                         bvert = up;
 
-			fleft += clockwise;
-			fright -= clockwise;
-			bleft  += clockwise;
-			bright -= clockwise;
+            			fleft += clockwise;
+            			fright -= clockwise;
+            			bleft  += clockwise;
+            			bright -= clockwise;
 
 
                         ImGui::Text("Forward-Left Motor: %d", fleft);
@@ -272,25 +275,24 @@ int main(int, char**)
 
                         output = "T";
 
-                        output.append(conv((int)(fright - clockwise)));//2
-                        output.append(conv((int)(fleft + clockwise)));//3
-                        output.append(conv((int)(bright - clockwise)));//4
-                        output.append(conv((int)(bleft + clockwise)));//5
+                        output.append(conv((int)(fright)));//2
+                        output.append(conv((int)(-fleft)));//3
+                        output.append(conv((int)(-bright)));//4
+                        output.append(conv((int)(bleft)));//5
 
                         output.append(conv((int)fvert));//6
                         output.append(conv((int)bvert));//7
 
                         std::string camout = pressing_camera? conv_norm(0) :  conv_norm(180);
 
-                        output.append(opening? conv_norm(200) : closing? conv_norm(0) : conv_norm(100));//8
-                        output.append(opening? conv_norm(200) : closing? conv_norm(0) : conv_norm(100));//9
-                        output.append(opening? conv_norm(200) : closing? conv_norm(0) : conv_norm(100));//10
-                        output.append(opening? conv_norm(200) : closing? conv_norm(0) : conv_norm(100));//11
+                        output.append(closing? conv_norm(0) : conv_norm(90));//8
+                        output.append(closing? conv_norm(0) : conv_norm(90));//9
+                        output.append(closing? conv_norm(0) : conv_norm(90));//10
+                        output.append(closing? conv_norm(0) : conv_norm(90));//11
                         output.append(camout);
-                        output.append(opening? conv_norm(200) : closing? conv_norm(0) : conv_norm(100));//12
+                        output.append(closing? conv_norm(0) : conv_norm(90));//12
 
-                        printf(output.c_str());
-                        printf("\n");
+                        std::cout << output << std::endl;
 
 
 
