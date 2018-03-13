@@ -22,6 +22,12 @@ endif()
 # Look up GLFW
 find_package(GLFW REQUIRED)
 
+#run with CMAKE_PREFIX_PATH="$(brew --prefix qt5)"
+
+find_package(Qt5 COMPONENTS Core Gui Widgets REQUIRED)
+set(QT_LIBRARIES Qt5::Core Qt5::Gui Qt5::Widgets)
+
+
 # Build executable
 include_directories(${Boost_INCLUDE_DIR})
 include_directories(${GLFW_INCLUDE_DIR})
@@ -42,6 +48,6 @@ file(GLOB_RECURSE Serial_SRC "ext/serial/src/*.cc")
 target_sources(Chernobot PUBLIC ${Serial_SRC})
 target_sources(Chernobot PUBLIC ${Chernobot_SOURCE_DIR}/ext/glad/src/glad.c)
 
-target_link_libraries(Chernobot ${GLFW_LIBRARIES})
+target_link_libraries(Chernobot ${GLFW_LIBRARIES} ${QT_LIBRARIES})
 
 install(TARGETS Chernobot RUNTIME DESTINATION ${BIN_DIR})

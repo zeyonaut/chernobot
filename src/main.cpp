@@ -7,6 +7,7 @@
 #include "nimir/gui.h"
 #include <iostream>
 #include <chrono>
+#include <algorithm>
 using namespace std::chrono;
 
 /*extern "C" {
@@ -30,11 +31,12 @@ using std::vector;
 
 #include <stdlib.h>
 
-const double PI =  3.1415926;
+#include <QApplication>
+#include <QGridLayout>
+#include <QGroupBox>
+#include <QComboBox>
 
-#define ABS(a) a > 0? a : (a*-1)
-#define MAX(a, b) ABS(a) > ABS(b)? ABS(a) : ABS(b)
-#define MIN(a, b) a > b? b : a
+const double PI = 3.1415926;
 
 struct vec2
 {
@@ -232,7 +234,8 @@ int main(int, char**)
 						}
 
 						ImGui::RadioButton("Saw", &is_lemming, 0); ImGui::SameLine();
-						ImGui::RadioButton("Lem", &is_lemming, 1);
+						ImGui::RadioButton("Lem", &is_lemming, 1); ImGui::SameLine();
+						ImGui::RadioButton("SORL", &is_lemming, 2);
 
 						ImGui::Text("Forward: %d", forward);
 						ImGui::Text("Right: %d", right);
@@ -306,10 +309,29 @@ int main(int, char**)
 							output.append(camout);
 							output.append(closing? conv_norm(0) : conv_norm(90));//12
 						}
-						else //if = 1
+						else if (is_lemming == 1)
 						{
-							output.append(conv((int)forward + clockwise));//6 1
-							output.append(conv((int)forward - clockwise));//7 2
+							output.append(conv((int)(-forward - clockwise)));//6 1
+							output.append(conv((int)(-forward + clockwise)));//7 2
+
+							output.append(conv((int)(up)));//2 4
+							output.append(conv((int)(-up)));//4 5
+
+							output.append(conv(0));//9 3
+							output.append(conv(0));//9 3
+
+							output.append(conv(0));//9 3
+							output.append(conv(0));//9 3
+
+							output.append(conv(0));//9 3
+							output.append(conv(0));//9 3
+
+							output.append("6464");
+						}
+						else // if = 2
+						{
+							output.append(conv((int)(forward + clockwise)));//6 1
+							output.append(conv((int)(forward - clockwise)));//7 2
 
 							output.append(conv((int)(up)));//2 4
 							output.append(conv((int)(up)));//4 5
@@ -322,12 +344,8 @@ int main(int, char**)
 
 							output.append(conv(0));//9 3
 							output.append(conv(0));//9 3
-							
-							output.append("wtf");
 
-							output.append(conv(0));//9 3
-							output.append(conv(0));//9 3
-							output.append("wtf");
+							output.append("6464");
 						}
 
 						ImGui::Text("Output: %s", output.c_str());
