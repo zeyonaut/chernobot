@@ -210,17 +210,17 @@ int main(int, char**)
 						ImGui::Text("Forward-Up Motor: %d", fvert);
 						ImGui::Text("Backward-Up Motor: %d", bvert);
 
-						ImGui::Text(pressing_camera? "The camera is being pressed" : "The Chimera is being dragged into hyperspace\n by giant floating WHALES");
+						ImGui::Text(pressing_camera? "The camera is being pressed" : "The Chimera is being dragged into hyperspace\nby giant floating WHALES");
 
 						output = "T";
 						if (is_lemming == 0)
 						{
-							output.append(conv((int)fvert));//6 1
+							output.append(conv((int)(-fvert)));//6 1
 							output.append(conv((int)bvert));//7 2
 
 							output.append(conv(0));//9 3
 
-							output.append(conv((int)(fright)));//2 4
+							output.append(conv((int)(-fright)));//2 4
 							output.append(conv((int)(bright)));//4 5
 							output.append(conv((int)(bleft)));//5 6
 							output.append(conv((int)(fleft)));//3 7
