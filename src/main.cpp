@@ -86,7 +86,7 @@ const char* conv(int num)
 int main(int, char**)
 {
 	GLFWwindow* window = NULL;
-	nimir::gl::init(window, 480, 720, "ARE WE BLIND?! DEPLOY THE GARRISON! <-- What even is this name?");
+	nimir::gl::init(window, 480, 720, "ARE WE BLIND?! DEPLOY THE GARRISON!");
 	nimir::gui::init(window, false);
 	serial::Serial port("");
 	port.setBaudrate(115200);
@@ -210,7 +210,7 @@ int main(int, char**)
 						ImGui::Text("Forward-Up Motor: %d", fvert);
 						ImGui::Text("Backward-Up Motor: %d", bvert);
 
-						ImGui::Text(pressing_camera? "The camera is being pressed" : "The Chimera, the Imperial I-class Star Destroyer, not the Imperial II-class Star Destroyer!, is being dragged into hyperspace\n by giant floating WHALES called Purrgil");
+						ImGui::Text(pressing_camera? "The camera is being pressed" : "The Chimera is being dragged into hyperspace\nby giant floating WHALES");
 
 						output = "T";
 						if (is_lemming == 0)
