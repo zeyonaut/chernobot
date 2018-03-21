@@ -82,6 +82,20 @@ const char* conv(int num)
 	return conv_norm(num + 100);
 }
 
+int curve (int input)
+{
+	double curve_magnitude = 2;
+	int max_value = 100;
+
+	if (input > 0)
+	{
+		return (int)(round(pow((input/(max_value/pow((double)(max_value),1/(curve_magnitude)))), curve_magnitude)));
+	}
+	else
+	{
+		return -(int)(round(pow((input/(max_value/pow((double)(max_value),1/(curve_magnitude)))), curve_magnitude)));
+	}
+}
 
 int main(int, char**)
 {
@@ -161,6 +175,11 @@ int main(int, char**)
 					ImGui::Combo("Joystick", &variableIndex, joysticks, GLFW_JOYSTICK_LAST);
 					//inputJoystick[variableIndex] = joystickIndex;
 					//writefln("%d%d", inputJoystick[variableIndex], inputJoystick[variableIndex] != -1? glfwJoystickPresent(inputJoystick[variableIndex]) : 0);
+
+					ImGui::RadioButton("Saw", &is_lemming, 0); ImGui::SameLine();
+					ImGui::RadioButton("Lem", &is_lemming, 1); ImGui::SameLine();
+					ImGui::RadioButton("Romulus", &is_lemming, 2);
+
 					if (variableIndex != -1? glfwJoystickPresent(variableIndex) == 1 : false)
 					{
 						int axcount;
@@ -172,9 +191,9 @@ int main(int, char**)
 
 						if (3 < axcount)
 						{
-							forward = (int) (-100 * rawAxes[1]);
+							forward = -1 * (int) (100 * rawAxes[1]);
 							right = (int) (100 * rawAxes[0]);
-							up = (int) (-100 *rawAxes[3]);
+							up = -1 * (int) (100 *rawAxes[3]);
 							clockwise = (int) (100 *rawAxes[2]);
 						}
 
@@ -186,95 +205,96 @@ int main(int, char**)
 							if (opening == true && closing == true) opening = closing = false;
 						}
 
-						ImGui::RadioButton("Saw", &is_lemming, 0); ImGui::SameLine();
-						ImGui::RadioButton("Lem", &is_lemming, 1); ImGui::SameLine();
-						ImGui::RadioButton("S+O+R+L", &is_lemming, 2);
-
 						ImGui::Text("Forward: %d", forward);
 						ImGui::Text("Right: %d", right);
 						ImGui::Text("Up: %d", up);
 						ImGui::Text("Clockwise: %d", clockwise);
 						ImGui::Text("Claw State: %s", opening? "Opening" : closing? "Closing" : "Neutral");
-
-						fleft = magnitude(right, forward, fleft_motor) + clockwise;
-						fright = magnitude(right, forward, fright_motor) - clockwise;
-						bleft = magnitude(right, forward, bleft_motor) + clockwise;
-						bright = magnitude(right, forward, bright_motor) - clockwise;
-						fvert = up;
-						bvert = up;
-
-						ImGui::Text("Forward-Left Motor: %d", fleft);
-						ImGui::Text("Forward-Right Motor: %d", fright);
-						ImGui::Text("Backward-Left Motor: %d", bleft);
-						ImGui::Text("Backward-Right Motor: %d", bright);
-						ImGui::Text("Forward-Up Motor: %d", fvert);
-						ImGui::Text("Backward-Up Motor: %d", bvert);
-
-						ImGui::Text(pressing_camera? "The camera is being pressed" : "The Chimera is being dragged into hyperspace\n by giant floating WHALES");
-
-						output = "T";
-						if (is_lemming == 0)
-						{
-							output.append(conv((int)fvert));//6 1
-							output.append(conv((int)bvert));//7 2
-
-							output.append(conv(0));//9 3
-
-							output.append(conv((int)(fright)));//2 4
-							output.append(conv((int)(bright)));//4 5
-							output.append(conv((int)(bleft)));//5 6
-							output.append(conv((int)(fleft)));//3 7
-
-
-							std::string camout = pressing_camera? conv_norm(0) :  conv_norm(180);
-
-							output.append(closing? conv_norm(0) : conv_norm(90));//8
-							output.append(closing? conv_norm(0) : conv_norm(90));//10
-							output.append(closing? conv_norm(0) : conv_norm(90));//11
-							output.append(camout);
-							output.append(closing? conv_norm(0) : conv_norm(90));//12
-						}
-						else if (is_lemming == 1)
-						{
-							output.append(conv((int)(-forward - clockwise)));//6 1
-							output.append(conv((int)(-forward + clockwise)));//7 2
-
-							output.append(conv((int)(up)));//2 4
-							output.append(conv((int)(-up)));//4 5
-
-							output.append(conv(0));//9 3
-							output.append(conv(0));//9 3
-
-							output.append(conv(0));//9 3
-							output.append(conv(0));//9 3
-
-							output.append(conv(0));//9 3
-							output.append(conv(0));//9 3
-
-							output.append("6464");
-						}
-						else // if = 2
-						{
-							output.append(conv((int)(forward + clockwise)));//6 1
-							output.append(conv((int)(forward - clockwise)));//7 2
-
-							output.append(conv((int)(up)));//2 4
-							output.append(conv((int)(up)));//4 5
-
-							output.append(conv(0));//9 3
-							output.append(conv(0));//9 3
-
-							output.append(conv(0));//9 3
-							output.append(conv(0));//9 3
-
-							output.append(conv(0));//9 3
-							output.append(conv(0));//9 3
-
-							output.append("6464");
-						}
-
-						ImGui::Text("Output: %s", output.c_str());
 					}
+
+					ImGui::SliderInt("Forward", &forward, -100.f, 100.f);
+					ImGui::SliderInt("Right", &right, -100.f, 100.f);
+					ImGui::SliderInt("Up", &up, -100.f, 100.f);
+					ImGui::SliderInt("Clockwise", &clockwise, -100.f, 100.f);
+
+					fleft = magnitude(curve(right), curve(forward), fleft_motor) + curve(clockwise);
+					fright = magnitude(curve(right), curve(forward), fright_motor) - curve(clockwise);
+					bleft = magnitude(curve(right), curve(forward), bleft_motor) + curve(clockwise);
+					bright = magnitude(curve(right), curve(forward), bright_motor) - curve(clockwise);
+					fvert = curve(up);
+					bvert = curve(up);
+
+					ImGui::Text("Forward-Left Motor: %d", fleft);
+					ImGui::Text("Forward-Right Motor: %d", fright);
+					ImGui::Text("Backward-Left Motor: %d", bleft);
+					ImGui::Text("Backward-Right Motor: %d", bright);
+					ImGui::Text("Forward-Up Motor: %d", fvert);
+					ImGui::Text("Backward-Up Motor: %d", bvert);
+
+					ImGui::Text(pressing_camera? "The camera is being pressed" : "The Chimera is being dragged into hyperspace\n by giant floating WHALES");
+
+					output = "T";
+					if (is_lemming == 0)
+					{
+						output.append(conv((int)fvert));//6 1
+						output.append(conv((int)bvert));//7 2
+
+						output.append(conv(0));//9 3
+
+						output.append(conv((int)(fright)));//2 4
+						output.append(conv((int)(bright)));//4 5
+						output.append(conv((int)(bleft)));//5 6
+						output.append(conv((int)(fleft)));//3 7
+
+
+						std::string camout = pressing_camera? conv_norm(0) :  conv_norm(180);
+
+						output.append(closing? conv_norm(0) : conv_norm(90));//8
+						output.append(closing? conv_norm(0) : conv_norm(90));//10
+						output.append(closing? conv_norm(0) : conv_norm(90));//11
+						output.append(camout);
+						output.append(closing? conv_norm(0) : conv_norm(90));//12
+					}
+					else if (is_lemming == 1)
+					{
+						output.append(conv((int)(-forward - clockwise)));//6 1
+						output.append(conv((int)(-forward + clockwise)));//7 2
+
+						output.append(conv((int)(up)));//2 4
+						output.append(conv((int)(-up)));//4 5
+
+						output.append(conv(0));//9 3
+						output.append(conv(0));//9 3
+
+						output.append(conv(0));//9 3
+						output.append(conv(0));//9 3
+
+						output.append(conv(0));//9 3
+						output.append(conv(0));//9 3
+
+						output.append("6464");
+					}
+					else // if = 2
+					{
+						output.append(conv((int)(forward + clockwise)));//6 1
+						output.append(conv((int)(forward - clockwise)));//7 2
+
+						output.append(conv((int)(up)));//2 4
+						output.append(conv((int)(up)));//4 5
+
+						output.append(conv(0));//9 3
+						output.append(conv(0));//9 3
+
+						output.append(conv(0));//9 3
+						output.append(conv(0));//9 3
+
+						output.append(conv(0));//9 3
+						output.append(conv(0));//9 3
+
+						output.append("6464");
+					}
+
+					ImGui::Text("Output: %s", output.c_str());
 
 					try
 					{
