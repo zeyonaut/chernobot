@@ -291,7 +291,16 @@ namespace gui
 
     bool init(GLFWwindow* window, bool install_callbacks)
     {
+    	ImGui::CreateContext();
+
+    	ImGui::StyleColorsDark();
+
         g_Window = window;
+
+        ImGuiStyle& style = ImGui::GetStyle();
+        style.WindowRounding = 0.f;
+        style.Alpha = 1.f;
+        style.WindowBorderSize= 0.f;
 
         ImGuiIO& io = ImGui::GetIO();
         io.KeyMap[ImGuiKey_Tab] = GLFW_KEY_TAB;                         // Keyboard mapping. ImGui will use those indices to peek into the io.KeyDown[] array.
@@ -335,7 +344,7 @@ namespace gui
     void quit()
     {
         invalidateDeviceObjects();
-        ImGui::Shutdown();
+        ImGui::DestroyContext();
     }
 
     void nextFrame()
