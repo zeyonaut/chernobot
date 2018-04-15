@@ -4,3 +4,6 @@
 [submodule "ext/serial"]
 	path = ext/serial
 	url = https://github.com/wjwwood/serial
+[submodule "ext/gainput"]
+	path = ext/gainput
+	url = https://github.com/jkuhlmann/gainput
