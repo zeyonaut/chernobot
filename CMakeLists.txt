@@ -21,11 +21,11 @@ elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
 endif()
 
 # Look up GLFW
-find_package(GLFW REQUIRED)
+find_package(SDL2 REQUIRED)
 
 # Build executable
 include_directories(${Boost_INCLUDE_DIR})
-include_directories(${GLFW_INCLUDE_DIR})
+include_directories(${SDL2_INCLUDE_DIR})
 include_directories(${Chernobot_SOURCE_DIR}/ext/glad/include)
 include_directories(${Chernobot_SOURCE_DIR}/ext/imgui)
 include_directories(${Chernobot_SOURCE_DIR}/ext/serial/include)
@@ -34,15 +34,20 @@ add_executable(Chernobot src/main.cpp)
 
 file(GLOB Chernobot_SRC "src/*.cpp")
 target_sources(Chernobot PUBLIC ${Chernobot_SRC})
-file(GLOB Nimir_SRC "src/nimir/*.cpp")
-target_sources(Chernobot PUBLIC ${Nimir_SRC})
 file(GLOB Imgui_SRC "ext/imgui/*.cpp")
 target_sources(Chernobot PUBLIC ${Imgui_SRC})
-
 file(GLOB_RECURSE Serial_SRC "ext/serial/src/*.cc")
 target_sources(Chernobot PUBLIC ${Serial_SRC})
 target_sources(Chernobot PUBLIC ${Chernobot_SOURCE_DIR}/ext/glad/src/glad.c)
 
-target_link_libraries(Chernobot ${GLFW_LIBRARIES} ${QT_LIBRARIES})
+target_link_libraries(Chernobot ${SDL2_LIBRARY})
+
+#dependencies for serial lib - replace with rs232 also incomplete for linux and windows
+if(APPLE)
+	find_library(IOKIT_LIBRARY IOKit)
+	find_library(FOUNDATION_LIBRARY Foundation)
+	target_link_libraries(Chernobot ${FOUNDATION_LIBRARY} ${IOKIT_LIBRARY})
+endif()
+
 
 install(TARGETS Chernobot RUNTIME DESTINATION ${BIN_DIR})

@@ -5,9 +5,10 @@
 #include "stb_image.h"
 
 #include <glad/glad.h>
-#include <GLFW/glfw3.h>
+//#include <GLFW/glfw3.h>
+#include <SDL.h>
 
-#include "imgui_impl_glfw_gl3.h"
+#include "imgui_impl_sdl_gl3.h"
 
 #include <vector>
 using std::vector;
@@ -19,37 +20,48 @@ using std::string;
 
 #include "overseer.h"
 
+int eventFilter( const SDL_Event *e )
+{
+    /*if( e->type == SDL_VIDEORESIZE )
+    {
+        SDL_SetVideoMode(e->resize.w,e->resize.h,0,SDL_ANYFORMAT | SDL_RESIZABLE);
+        draw();
+    }*/
+    return 1; // return 1 so all events are added to queue
+}
+
 int main (int, char**)
 {
-	glfwSetErrorCallback
-	(
-		[](int error, const char* description)
-	    {
-	        fprintf(stderr, "Error %d: %s\n", error, description);
-	    }
-    );
-	if (!glfwInit()) return 1;
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
-	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
-	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
-#if __APPLE__
-	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
-#endif
-	GLFWwindow* window = glfwCreateWindow(1280, 720, "chernobot - console", NULL, NULL);
-	glfwMakeContextCurrent(window);
-	glfwSwapInterval( 1 );
+	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK) != 0)
+    {
+        printf("Error: %s\n", SDL_GetError());
+        return -1;
+    }
+
+    //SDL_SetEventFilter( &eventFilter );
+
+    // Setup window
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
+    SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
+    SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
+    SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
+    SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
+    SDL_DisplayMode current;
+    SDL_GetCurrentDisplayMode(0, &current);
+    SDL_Window* window = SDL_CreateWindow("console", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
+    SDL_GLContext gl_context = SDL_GL_CreateContext(window);
+    SDL_GL_SetSwapInterval(1); // Enable vsync
+
 	gladLoadGL();
 
 	ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
     //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
-    ImGui_ImplGlfwGL3_Init(window, false);
 
-    glfwSetMouseButtonCallback(window, [](GLFWwindow* window, int button, int action, int mods) { ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods); });
-	glfwSetScrollCallback(window, [](GLFWwindow* window, double xoffset, double yoffset) { ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset); });
-	glfwSetKeyCallback(window, [](GLFWwindow* window, int key, int scancode, int action, int mods) { ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods); });
-	glfwSetCharCallback(window, [](GLFWwindow* window, unsigned int c) { ImGui_ImplGlfw_CharCallback(window, c); });
+    ImGui_ImplSdlGL3_Init(window);
 
     // Setup style
     ImGui::StyleColorsDark();
@@ -80,31 +92,35 @@ int main (int, char**)
 	serial::Serial prt("");
 	prt.setBaudrate(115200);
 
-	while (!glfwWindowShouldClose(window))
+	bool running = true;
+
+	while (running)
 	{	
-		glfwPollEvents();
-
-		int window_w, window_h;
-		glfwGetWindowSize(window, &window_w, &window_h);
-
-		ImGui_ImplGlfwGL3_NewFrame();
-
-		const char* joysticks [GLFW_JOYSTICK_LAST];
-		int maxJoystick = GLFW_JOYSTICK_LAST;
-		for (int i = 0; i < GLFW_JOYSTICK_LAST; i++)
-		{
-			if(glfwJoystickPresent(i)) joysticks[i] = glfwGetJoystickName(i);
-			else {joysticks[i] = "";}
-		}
+		int window_w = 640; int window_h = 480;
+		SDL_GetWindowSize(window, &window_w, &window_h);
+		SDL_Event event;
+        while (SDL_PollEvent(&event))
+        {
+            ImGui_ImplSdlGL3_ProcessEvent(&event);
+            if (event.type == SDL_QUIT)
+                running = false;
+        }
+        ImGui_ImplSdlGL3_NewFrame(window);
 
 		vector<serial::PortInfo> portinfo = serial::list_ports();
 
 		if (ImGui::BeginMainMenuBar())
-	    {
-	    	ImGui::PushItemWidth(0.3f * window_w);
+		{
+			ImGui::PushItemWidth(0.3f * window_w);
 
-			if (ImGui::BeginCombo("##slave_selector", std::string("slave: ").append(portIndex >= 0 && portIndex < portinfo.size()? portinfo[portIndex].port : "none").c_str(), ImGuiComboFlags_NoArrowButton))
+			if (portIndex >= portinfo.size()) portIndex = -1;
+			if (ImGui::BeginCombo("Slave", std::string(portIndex >= 0? portinfo[portIndex].port : "<none>").c_str(), ImGuiComboFlags_NoArrowButton))
 			{
+				{
+					bool is_none_selected = portIndex == -1;
+					if (ImGui::Selectable("<none>", is_none_selected)) portIndex = -1;
+					if (is_none_selected) ImGui::SetItemDefaultFocus();
+				}
 				for (int i = 0; i < portinfo.size(); ++i)
 				{
 					bool is_selected = portIndex == i;
@@ -114,12 +130,18 @@ int main (int, char**)
 				ImGui::EndCombo();
 			}
 
-			if (ImGui::BeginCombo("##joy_selector", std::string("joy: ").append(variableIndex >= 0 && variableIndex < GLFW_JOYSTICK_LAST? joysticks[variableIndex] : "none").c_str(), ImGuiComboFlags_NoArrowButton))
+	    	if (variableIndex >= SDL_NumJoysticks()) variableIndex = -1;
+			if (ImGui::BeginCombo("Joystick", std::string(variableIndex >= 0? SDL_JoystickNameForIndex(variableIndex) : "<none>").c_str(), ImGuiComboFlags_NoArrowButton))
 			{
-				for (int i = 0; i < GLFW_JOYSTICK_LAST; ++i)
+				{
+					bool is_none_selected = variableIndex == -1;
+					if (ImGui::Selectable("<none>", is_none_selected)) variableIndex = -1;
+					if (is_none_selected) ImGui::SetItemDefaultFocus();
+				}
+				for (int i = 0; i < SDL_NumJoysticks(); ++i)
 				{
 					bool is_selected = variableIndex == i;
-					if (ImGui::Selectable(joysticks[i], is_selected)) variableIndex = i;
+					if (ImGui::Selectable(SDL_JoystickNameForIndex(i), is_selected)) variableIndex = i;
 					if (is_selected) ImGui::SetItemDefaultFocus();
 				}
 				ImGui::EndCombo();
@@ -140,28 +162,21 @@ int main (int, char**)
 		ImGui::RadioButton("Lem", &is_lemming, 1); ImGui::SameLine();
 		ImGui::RadioButton("Romulus", &is_lemming, 2);
 
-		if (variableIndex != -1? glfwJoystickPresent(variableIndex) == 1 : false)
+		if (variableIndex >= -1)
 		{
-			int axcount;
-			const float* rawAxes = glfwGetJoystickAxes(variableIndex, &axcount);
-			int bucount;
-			const unsigned char* rawButtons = glfwGetJoystickButtons(variableIndex, &bucount);
+			SDL_Joystick* joy = SDL_JoystickOpen(variableIndex);
 
-			//TODO: Do things with values of axes and buttons
-
-			if (3 < axcount)
+			if (joy)
 			{
-				c.forward = -1 * (int) (100 * rawAxes[1]);
-				c.right = (int) (100 * rawAxes[0]);
-				c.up = -1 * (int) (100 *rawAxes[3]);
-				c.clockwise = (int) (100 *rawAxes[2]);
+				if (SDL_JoystickNumAxes(joy) > 3)
+				{
+					c.forward = -1 * (int) (100.f * SDL_JoystickGetAxis(joy, 1)/32767.f);
+					c.right = (int) (100.f * SDL_JoystickGetAxis(joy, 0)/32767.f);
+					c.up = -1 * (int) (100.f * SDL_JoystickGetAxis(joy, 3)/32767.f);
+					c.clockwise = (int) (100.f * SDL_JoystickGetAxis(joy, 2)/32767.f);
+				}
+				SDL_JoystickClose(joy);
 			}
-
-			if (3 < bucount)
-			{
-				//opening = rawButtons[1] == GLFW_PRESS;
-			}
-
 		}
 
 		ImGui::SliderInt("Forward", &c.forward, -100.f, 100.f);
@@ -203,22 +218,19 @@ int main (int, char**)
 
 		ImGui::End();
 
-		int w, h;
-        glfwGetFramebufferSize(window, &w, &h);
-		glViewport(0, 0, w, h);
+        glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
         glClear(GL_COLOR_BUFFER_BIT);
-        ImGui::Render();
 		ImGui::Render();
-        ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
-
-		glfwSwapBuffers(window);
+        ImGui_ImplSdlGL3_RenderDrawData(ImGui::GetDrawData());
+        SDL_GL_SwapWindow(window);
 	}
 
-	ImGui_ImplGlfwGL3_Shutdown();
+	ImGui_ImplSdlGL3_Shutdown();
     ImGui::DestroyContext();
 
-	glfwDestroyWindow(window);
-    glfwTerminate();
+    SDL_GL_DeleteContext(gl_context);
+    SDL_DestroyWindow(window);
+    SDL_Quit();
 
 	return 0;
 }
