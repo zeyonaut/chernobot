@@ -1,13 +1,5 @@
 TODO:
 
-- Finish servo code
-- Finish camera code (ffmpeg)
-
-- Convert to rust (multiple step process, lots of wishful thinking)
-    - Use IOKit API to create a joystick library for Mac (maybe send PR to gilrs or reminisce)
-    - Use Gfx to create a primitive render queue library (theia) or stick with conrod/imgui-rs and be sad
-    - Use theia to create an 'OO' gui framework
-    - Create extension to gui framework
-    - Use extension to code a new GUI for the program and reimplement everything
-    - hope and pray that ffmpeg and serial port works in rust
-    - rejoice in a better language for the codebase and relax
+- Reinstate ffmpeg code from test repo.
+- Safer serial and joystick.
+- Zeroing pilot controls.
