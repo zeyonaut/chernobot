@@ -6,9 +6,10 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${Chernobot_SOURCE_DIR}/cmake")
 # Set binary folder to ./bin
 set(BIN_DIR ${Chernobot_SOURCE_DIR}/bin)
 
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wc++11-extensions")
 # Set warning levels and debug/release specific flags
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU" OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++14 -Wc++11-extensions")
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11 -Wc++11-extensions")
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG} -g")
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE} -O2")
 elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
@@ -31,7 +32,7 @@ include_directories(${Chernobot_SOURCE_DIR}/ext/serial/include)
 
 add_executable(Chernobot src/main.cpp)
 
-file(GLOB Chernobot_SRC "*.cpp")
+file(GLOB Chernobot_SRC "src/*.cpp")
 target_sources(Chernobot PUBLIC ${Chernobot_SRC})
 file(GLOB Nimir_SRC "src/nimir/*.cpp")
 target_sources(Chernobot PUBLIC ${Nimir_SRC})

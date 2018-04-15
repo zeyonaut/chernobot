@@ -1,14 +1,13 @@
 #include <imgui.h>
 #include <serial/serial.h>
 
-#include "nimir/graphics.h"
-#include "nimir/gui.h"
-
 #define STB_IMAGE_IMPLEMENTATION
 #include "stb_image.h"
 
 #include <glad/glad.h>
 #include <GLFW/glfw3.h>
+
+#include "imgui_impl_glfw_gl3.h"
 
 #include <vector>
 using std::vector;
@@ -73,26 +72,56 @@ int curve (int input)
 
 std::string serialize_data (std::array<unsigned char, 12> pin_data)
 {
-	std::string serialized_data = "T";
+	std::string serialized_data = "ÿ";
 	for (unsigned char i : pin_data) serialized_data.push_back(i);
 	return serialized_data;
 }
 
 int main (int, char**)
 {
-	GLFWwindow* window = NULL;
-	nimir::gl::init(window, 480, 720, "ARE WE BLIND?! DEPLOY THE GARRISON!");
-	nimir::gui::init(window, false);
+	glfwSetErrorCallback
+	(
+		[](int error, const char* description)
+	    {
+	        fprintf(stderr, "Error %d: %s\n", error, description);
+	    }
+    );
+	if (!glfwInit()) return 1;
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MAJOR, 3);
+	glfwWindowHint(GLFW_CONTEXT_VERSION_MINOR, 2);
+	glfwWindowHint(GLFW_OPENGL_PROFILE, GLFW_OPENGL_CORE_PROFILE);
+#if __APPLE__
+	glfwWindowHint(GLFW_OPENGL_FORWARD_COMPAT, GL_TRUE);
+#endif
+	GLFWwindow* window = glfwCreateWindow(1280, 720, "chernobot - console", NULL, NULL);
+	glfwMakeContextCurrent(window);
+	glfwSwapInterval( 1 );
+	gladLoadGL();
 
-	nimir::gl::setClearColor(ImColor(0, 0, 0));
+	ImGui::CreateContext();
+    ImGuiIO& io = ImGui::GetIO(); (void)io;
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
+    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
+    ImGui_ImplGlfwGL3_Init(window, false);
+
+    glfwSetMouseButtonCallback(window, [](GLFWwindow* window, int button, int action, int mods) { ImGui_ImplGlfw_MouseButtonCallback(window, button, action, mods); });
+	glfwSetScrollCallback(window, [](GLFWwindow* window, double xoffset, double yoffset) { ImGui_ImplGlfw_ScrollCallback(window, xoffset, yoffset); });
+	glfwSetKeyCallback(window, [](GLFWwindow* window, int key, int scancode, int action, int mods) { ImGui_ImplGlfw_KeyCallback(window, key, scancode, action, mods); });
+	glfwSetCharCallback(window, [](GLFWwindow* window, unsigned int c) { ImGui_ImplGlfw_CharCallback(window, c); });
+
+    // Setup style
+    ImGui::StyleColorsDark();
+
+	ImGuiStyle& style = ImGui::GetStyle();
+	style.WindowRounding = 0.f;
+	style.Alpha = 1.f;
+	style.WindowBorderSize= 0.f;
+	style.FrameBorderSize= 0.f;
+
+	glClearColor(0, 0, 0, 1);
 
 	serial::Serial port("");
 	port.setBaudrate(115200);
-
-	glfwSetMouseButtonCallback(window, nimir::gui::mouseButtonCallback);
-	glfwSetScrollCallback(window, nimir::gui::scrollCallback);
-	glfwSetKeyCallback(window, nimir::gui::keyCallback);
-	glfwSetCharCallback(window, nimir::gui::charCallback);
 
 	std::array<unsigned char, 12> pin_data;
 
@@ -130,17 +159,14 @@ int main (int, char**)
 	serial::Serial prt("");
 	prt.setBaudrate(115200);
 
-	while (nimir::gl::nextFrame(window)) //while true
-	{
-		nimir::gui::nextFrame(); //panel.advance()
-	
+	while (!glfwWindowShouldClose(window))
+	{	
+		glfwPollEvents();
+
 		int window_w, window_h;
 		glfwGetWindowSize(window, &window_w, &window_h);
-		ImGui::SetNextWindowSize(ImVec2(window_w, window_h), ImGuiSetCond_Always);
-		ImGui::SetNextWindowPos(ImVec2(0.f, 0.f), ImGuiSetCond_Always);
-		ImGui::Begin("Console", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-		ImGui::Text("Application running at %.1f FPS", ImGui::GetIO().Framerate);
+		ImGui_ImplGlfwGL3_NewFrame();
 
 		const char* joysticks [GLFW_JOYSTICK_LAST];
 		int maxJoystick = GLFW_JOYSTICK_LAST;
@@ -151,17 +177,43 @@ int main (int, char**)
 		}
 
 		vector<serial::PortInfo> portinfo = serial::list_ports();
-		const char** ports = new const char* [portinfo.size()];
-		for (int i = 0; i < portinfo.size(); i++)
-		{
-			ports[i] = portinfo[i].port.c_str();
+
+		if (ImGui::BeginMainMenuBar())
+	    {
+	    	ImGui::PushItemWidth(0.3f * window_w);
+
+			if (ImGui::BeginCombo("##slave_selector", std::string("slave: ").append(portIndex >= 0 && portIndex < portinfo.size()? portinfo[portIndex].port : "none").c_str(), ImGuiComboFlags_NoArrowButton))
+			{
+				for (int i = 0; i < portinfo.size(); ++i)
+				{
+					bool is_selected = portIndex == i;
+					if (ImGui::Selectable(portinfo[i].port.c_str(), is_selected)) portIndex = i;
+					if (is_selected) ImGui::SetItemDefaultFocus();
+				}
+				ImGui::EndCombo();
+			}
+
+			if (ImGui::BeginCombo("##joy_selector", std::string("joy: ").append(variableIndex >= 0 && variableIndex < GLFW_JOYSTICK_LAST? joysticks[variableIndex] : "none").c_str(), ImGuiComboFlags_NoArrowButton))
+			{
+				for (int i = 0; i < GLFW_JOYSTICK_LAST; ++i)
+				{
+					bool is_selected = variableIndex == i;
+					if (ImGui::Selectable(joysticks[i], is_selected)) variableIndex = i;
+					if (is_selected) ImGui::SetItemDefaultFocus();
+				}
+				ImGui::EndCombo();
+			}
+
+			ImGui::PopItemWidth();
+
+			ImGui::EndMainMenuBar();
 		}
 
-		ImGui::Combo("Serial Port", &portIndex, ports, portinfo.size());
+		ImGui::SetNextWindowSize(ImVec2(window_w, window_h), ImGuiSetCond_Always);
+		ImGui::SetNextWindowPos(ImVec2(0.f, ImGui::GetFrameHeight()), ImGuiSetCond_Always);
+		ImGui::Begin("Console", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-		ImGui::Combo("Joystick", &variableIndex, joysticks, GLFW_JOYSTICK_LAST);
-		//inputJoystick[variableIndex] = joystickIndex;
-		//writefln("%d%d", inputJoystick[variableIndex], inputJoystick[variableIndex] != -1? glfwJoystickPresent(inputJoystick[variableIndex]) : 0);
+		ImGui::Text("Application running at %.1f FPS", ImGui::GetIO().Framerate);
 
 		ImGui::RadioButton("Saw", &is_lemming, 0); ImGui::SameLine();
 		ImGui::RadioButton("Lem", &is_lemming, 1); ImGui::SameLine();
@@ -281,12 +333,23 @@ int main (int, char**)
 
 		ImGui::End();
 
-		nimir::gui::drawFrame();
-		nimir::gl::drawFrame(window);
+		int w, h;
+        glfwGetFramebufferSize(window, &w, &h);
+		glViewport(0, 0, w, h);
+        glClear(GL_COLOR_BUFFER_BIT);
+        ImGui::Render();
+		ImGui::Render();
+        ImGui_ImplGlfwGL3_RenderDrawData(ImGui::GetDrawData());
+
+		glfwSwapBuffers(window);
 	}
 
-	nimir::gui::quit();
-	nimir::gl::quit();
+	ImGui_ImplGlfwGL3_Shutdown();
+    ImGui::DestroyContext();
+
+	glfwDestroyWindow(window);
+    glfwTerminate();
+
 
 	return 0;
 }
