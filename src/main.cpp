@@ -7,6 +7,7 @@
 #include <glad/glad.h>
 //#include <GLFW/glfw3.h>
 #include <SDL.h>
+#include <SDL_keycode.h>
 
 #include "imgui_impl_sdl_gl3.h"
 
@@ -19,6 +20,8 @@ using std::vector;
 using std::string;
 
 #include "overseer.h"
+
+#include <chrono>
 
 int eventFilter( const SDL_Event *e )
 {
@@ -50,7 +53,7 @@ int main (int, char**)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
     SDL_DisplayMode current;
     SDL_GetCurrentDisplayMode(0, &current);
-    SDL_Window* window = SDL_CreateWindow("console", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 1280, 720, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
+    SDL_Window* window = SDL_CreateWindow("console", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 360, 720, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
     SDL_GLContext gl_context = SDL_GL_CreateContext(window);
     SDL_GL_SetSwapInterval(1); // Enable vsync
 
@@ -94,6 +97,11 @@ int main (int, char**)
 
 	bool running = true;
 
+	auto key_last = std::chrono::high_resolution_clock::now();
+	auto key_now = std::chrono::high_resolution_clock::now();
+
+	int acceleration = 33; //percent per second
+
 	while (running)
 	{	
 		int window_w = 640; int window_h = 480;
@@ -102,12 +110,80 @@ int main (int, char**)
         while (SDL_PollEvent(&event))
         {
             ImGui_ImplSdlGL3_ProcessEvent(&event);
-            if (event.type == SDL_QUIT)
-                running = false;
-        }
+            if (event.type == SDL_QUIT) running = false;
+    	}
         ImGui_ImplSdlGL3_NewFrame(window);
 
+        key_now = std::chrono::high_resolution_clock::now();
+    	double time = std::chrono::duration_cast<std::chrono::duration<double>>(key_now - key_last).count();
+        const Uint8* currentKeyStates = SDL_GetKeyboardState( NULL );
+
+        int mdz = 25; //motor deadzone magnitude
+		if( currentKeyStates[ SDL_SCANCODE_W ] )
+		{
+			if (c.forward < mdz) c.forward = mdz; 
+			c.forward += (acceleration * time);
+		}
+		else if( currentKeyStates[ SDL_SCANCODE_S ] )
+		{
+			if (c.forward > -mdz) c.forward = -mdz; 
+			c.forward -= (acceleration * time);
+		}
+		else c.forward = 0;
+
+		if( currentKeyStates[ SDL_SCANCODE_A ] )
+		{
+			if (c.right > -mdz) c.right = -mdz; 
+			c.right -= (acceleration * time);
+		}
+		else if( currentKeyStates[ SDL_SCANCODE_D ] )
+		{
+			if (c.right < mdz) c.right = mdz; 
+			c.right += (acceleration * time);
+		}
+		else c.right = 0;
+
+		if( currentKeyStates[ SDL_SCANCODE_I ] )
+		{
+			if (c.up < mdz) c.up = mdz; 
+			c.up += (acceleration * time);
+		}
+		else if( currentKeyStates[ SDL_SCANCODE_K ] )
+		{
+			if (c.up > -mdz) c.up = -mdz; 
+			c.up -= (acceleration * time);
+		}
+		else c.up = 0;
+
+		if( currentKeyStates[ SDL_SCANCODE_J ] )
+		{
+			if (c.clockwise > -mdz) c.clockwise = -mdz; 
+			c.clockwise -= (acceleration * time);
+		}
+		else if( currentKeyStates[ SDL_SCANCODE_L ] )
+		{
+			if (c.clockwise < mdz) c.clockwise = mdz; 
+			c.clockwise += (acceleration * time);
+		}
+		else c.clockwise = 0;
+
+		if( currentKeyStates[ SDL_SCANCODE_U ] )
+		{
+			if (c.moclaw > 0) c.moclaw = 0; 
+			c.moclaw -= (acceleration * time * 0.5);
+		}
+		else if( currentKeyStates[ SDL_SCANCODE_O ] )
+		{
+			if (c.moclaw < 0) c.moclaw = 0; 
+			c.moclaw += (acceleration * time * 0.5);
+		}
+		else c.moclaw = 0;
+
+		key_last = std::chrono::high_resolution_clock::now();
+
 		vector<serial::PortInfo> portinfo = serial::list_ports();
+
+
 
 		if (ImGui::BeginMainMenuBar())
 		{
@@ -156,6 +232,8 @@ int main (int, char**)
 		ImGui::SetNextWindowPos(ImVec2(0.f, ImGui::GetFrameHeight()), ImGuiSetCond_Always);
 		ImGui::Begin("Console", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
+			ImGui::Text("Time duration: %.4f", time);
+
 		ImGui::Text("Application running at %.1f FPS", ImGui::GetIO().Framerate);
 
 		ImGui::RadioButton("Saw", &is_lemming, 0); ImGui::SameLine();
@@ -179,14 +257,25 @@ int main (int, char**)
 			}
 		}
 
-		ImGui::SliderInt("Forward", &c.forward, -100.f, 100.f);
-		ImGui::SliderInt("Right", &c.right, -100.f, 100.f);
-		ImGui::SliderInt("Up", &c.up, -100.f, 100.f);
-		ImGui::SliderInt("Clockwise", &c.clockwise, -100.f, 100.f);
+		ImGui::PushItemWidth(-1);
 
-		ImGui::SliderInt("Chlaw", &c.moclaw, -100.f, 100.f);
+		int max = 50;
+
+		c.forward = c.forward > max? max : c.forward < -max? -max : c.forward;
+		c.right = c.right > max? max : c.right < -max? -max : c.right;
+		c.up = c.up > max? max : c.up < -max? -max : c.up;
+		c.clockwise = c.clockwise > max? max : c.clockwise < -max? -max : c.clockwise;
+		c.moclaw = c.moclaw > max? max : c.moclaw < -max? -max : c.moclaw;
+
+		ImGui::SliderFloat("Forward", &c.forward, -100.f, 100.f);
+		ImGui::SliderFloat("Right", &c.right, -100.f, 100.f);
+		ImGui::SliderFloat("Up", &c.up, -100.f, 100.f);
+		ImGui::SliderFloat("Clockwise", &c.clockwise, -100.f, 100.f);
+		ImGui::SliderFloat("ClawOpening", &c.moclaw, -15.f, 15.f);
 
 		serialize_controls(pin_data, c, is_lemming);
+
+		ImGui::PopItemWidth();
 
 		try
 		{

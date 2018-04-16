@@ -69,18 +69,18 @@ int magnitude (const int tx, const int ty, const vec2 motor)
 	return -(int)result;
 }
 
-int curve (int input)
+int curve (float input)
 {
 	double curve_magnitude = 2;
 	int max_value = 100;
 
 	if (input > 0)
 	{
-		return (int)(round(pow((input/(max_value/pow((double)(max_value),1/(curve_magnitude)))), curve_magnitude)));
+		return (int)(round(pow(((int)input/(max_value/pow((double)(max_value),1/(curve_magnitude)))), curve_magnitude)));
 	}
 	else
 	{
-		return -(int)(round(pow((input/(max_value/pow((double)(max_value),1/(curve_magnitude)))), curve_magnitude)));
+		return -(int)(round(pow((int)(input/(max_value/pow((double)(max_value),1/(curve_magnitude)))), curve_magnitude)));
 	}
 }
 
@@ -96,12 +96,12 @@ void serialize_controls(std::array<unsigned char, 12>& pin_data, const Controls&
 		int fvert = curve(c.up);
 		int bvert = curve(c.up);
 
-		ImGui::Text("Forward-Left Motor: %d", fleft);
-		ImGui::Text("Forward-Right Motor: %d", fright);
-		ImGui::Text("Backward-Left Motor: %d", bleft);
-		ImGui::Text("Backward-Right Motor: %d", bright);
-		ImGui::Text("Forward-Up Motor: %d", fvert);
-		ImGui::Text("Backward-Up Motor: %d", bvert);
+		ImGui::Text("Forward-Left Motor: %f", fleft);
+		ImGui::Text("Forward-Right Motor: %f", fright);
+		ImGui::Text("Backward-Left Motor: %f", bleft);
+		ImGui::Text("Backward-Right Motor: %f", bright);
+		ImGui::Text("Forward-Up Motor: %f", fvert);
+		ImGui::Text("Backward-Up Motor: %f", bvert);
 
 		pin_data[0] = -1 * bleft + 100;//6 1
 		pin_data[1] = bvert + 100;//7 2 TODO: FIGURE OUT WHETHER THE 'BACK ELEVATION' IS ON THE LEFT OR THE RIGHT. I believe the back elevation is actually right side.
@@ -134,7 +134,8 @@ void serialize_controls(std::array<unsigned char, 12>& pin_data, const Controls&
 
 std::string serialize_data (std::array<unsigned char, 12> pin_data)
 {
-	std::string serialized_data = "ÿ";
+	std::string serialized_data = "";
+	serialized_data.push_back((unsigned char) 255);
 	for (unsigned char i : pin_data) serialized_data.push_back(i);
 	return serialized_data;
 }
