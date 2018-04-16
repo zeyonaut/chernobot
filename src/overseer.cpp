@@ -93,23 +93,23 @@ void serialize_controls(std::array<unsigned char, 12>& pin_data, const Controls&
 		int fright = magnitude(curve(c.right), curve(c.forward), fright_motor) - curve(c.clockwise);
 		int bleft = magnitude(curve(c.right), curve(c.forward), bleft_motor) + curve(c.clockwise);
 		int bright = magnitude(curve(c.right), curve(c.forward), bright_motor) - curve(c.clockwise);
-		int fvert = curve(c.up);
-		int bvert = curve(c.up);
+		int lvert = curve(c.up);
+		int rvert = curve(c.up);
 
 		ImGui::Text("Forward-Left Motor: %f", fleft);
 		ImGui::Text("Forward-Right Motor: %f", fright);
 		ImGui::Text("Backward-Left Motor: %f", bleft);
 		ImGui::Text("Backward-Right Motor: %f", bright);
-		ImGui::Text("Forward-Up Motor: %f", fvert);
-		ImGui::Text("Backward-Up Motor: %f", bvert);
+		ImGui::Text("Left-Up Motor: %f", lvert);
+		ImGui::Text("Right-Up Motor: %f", rvert);
 
 		pin_data[0] = -1 * bleft + 100;//6 1
-		pin_data[1] = bvert + 100;//7 2 TODO: FIGURE OUT WHETHER THE 'BACK ELEVATION' IS ON THE LEFT OR THE RIGHT. I believe the back elevation is actually right side.
+		pin_data[1] = rvert + 100;//7 2 TODO: FIGURE OUT WHETHER THE 'BACK ELEVATION' IS ON THE LEFT OR THE RIGHT. I believe the back elevation is actually right side.
 
 		pin_data[3] = -1 *(fright) + 100;//2 4
 		pin_data[4] = (bright) + 100;//4 5
 
-		pin_data[5] = (fvert) + 100;//5 6
+		pin_data[5] = (lvert) + 100;//5 6
 		pin_data[6] = (fleft) + 100;//3 7
 
 		pin_data[2] = c.moclaw + 100;
