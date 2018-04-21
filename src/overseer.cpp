@@ -1,41 +1,9 @@
-/*
-
-
-[window + ui] --------------------------------------+
-	^												|
-	|												|
-[ui logic (rendering, drawing, debug displays)] <---+
-	^				^								|
-	|				|								V
-[driving outputs] <-O-----------------------[driving inputs] <-- [keyboard, mouse]			
-	|				|
-	V				|
-[serial port] -------
-
-
-window, ui, ui logic: folder panel
-
-driving inputs, driving outputs: folder pilot
-
-serial input, serial output: folder slave
-
-/\ The naiive way
-
-V the better way
-
-
-[input-assigner]: 
-
-provides a list of input types. something else can request an input (say, axis($device_id, $index), input-assigner does bounds checks and stuff)
-
-*/
-
-// x is positive on the left, y is positive in front
-
 #include "overseer.h"
 #include <imgui.h>
 #include <cmath>
+#include <cstdint>
 
+// x is positive on the left, y is positive in front
 vec2 fleft_motor = {1, 1};
 vec2 fright_motor = {-1, 1};
 vec2 bleft_motor = {-1, 1};
@@ -84,58 +52,70 @@ int curve (float input)
 	}
 }
 
-void serialize_controls(std::array<unsigned char, 12>& pin_data, const Controls& c, int botflag) //FIXME no null checks
+void absolutely_clamp(int& i, int magnitude)
+{
+	i = i > magnitude? magnitude : i < -magnitude? -magnitude : i;
+}
+
+void serialize_controls(std::array<std::uint8_t, 12>& pin_data, const Controls& c, int botflag)
 {
 	pin_data.fill(0 + 100);
 	if (botflag == 0) //Saw
 	{
-		int fleft = magnitude(curve(c.right), curve(c.forward), fleft_motor) + curve(c.clockwise);
-		int fright = magnitude(curve(c.right), curve(c.forward), fright_motor) - curve(c.clockwise);
-		int bleft = magnitude(curve(c.right), curve(c.forward), bleft_motor) + curve(c.clockwise);
-		int bright = magnitude(curve(c.right), curve(c.forward), bright_motor) - curve(c.clockwise);
-		int lvert = curve(c.up);
-		int rvert = curve(c.up);
+		int fleft = magnitude(c.right, c.forward, fleft_motor) + c.clockwise;
+		int fright = magnitude(c.right, c.forward, fright_motor) - c.clockwise;
+		int bleft = magnitude(c.right, c.forward, bleft_motor) + c.clockwise;
+		int bright = magnitude(c.right, c.forward, bright_motor) - c.clockwise;
+		int lvert = c.up;
+		int rvert = c.up;
 
-		ImGui::Text("Forward-Left Motor: %f", fleft);
-		ImGui::Text("Forward-Right Motor: %f", fright);
-		ImGui::Text("Backward-Left Motor: %f", bleft);
-		ImGui::Text("Backward-Right Motor: %f", bright);
-		ImGui::Text("Left-Up Motor: %f", lvert);
-		ImGui::Text("Right-Up Motor: %f", rvert);
+		absolutely_clamp(fleft, 100);
+		absolutely_clamp(fright, 100);
+		absolutely_clamp(bleft, 100);
+		absolutely_clamp(bright, 100);
+		absolutely_clamp(lvert, 100);
+		absolutely_clamp(rvert, 100);
 
-		pin_data[0] = -1 * bleft + 100;//6 1
-		pin_data[1] = rvert + 100;//7 2 TODO: FIGURE OUT WHETHER THE 'BACK ELEVATION' IS ON THE LEFT OR THE RIGHT. I believe the back elevation is actually right side.
+		ImGui::Text("Forward-Left Motor: %d", fleft);
+		ImGui::Text("Forward-Right Motor: %d", fright);
+		ImGui::Text("Backward-Left Motor: %d", bleft);
+		ImGui::Text("Backward-Right Motor: %d", bright);
+		ImGui::Text("Left-Up Motor: %d", lvert);
+		ImGui::Text("Right-Up Motor: %d", rvert);
 
-		pin_data[3] = -1 *(fright) + 100;//2 4
-		pin_data[4] = (bright) + 100;//4 5
+		pin_data[0] = -1 * bleft + 100;//6 1 //not reversed because backwards config and counterclockwise config cancels each other out //reversed due to wiring minutia
+		pin_data[1] = rvert + 100;
+		
+		pin_data[3] = -1 *(fright) + 100;//2 4 //reversed due to wiring minutia
+		pin_data[4] = (-bright) + 100;//4 5 //reversed due to backwards configuration
 
-		pin_data[5] = (lvert) + 100;//5 6
-		pin_data[6] = (fleft) + 100;//3 7
+		pin_data[5] = (-lvert) + 100;//5 6 //reversed due to ccwise config
+		pin_data[6] = (-fleft) + 100;//3 7 //reversed due to ccwise config
 
 		pin_data[2] = c.moclaw + 100;
 	}
 	else if (botflag == 1) //Lem
 	{
-		pin_data[0] = (-c.forward - c.clockwise) + 100;//6 1
-		pin_data[1] = (-c.forward + c.clockwise) + 100;//7 2
+		pin_data[0] = (-c.forward + c.right) + 100;//6 1 rforward
+		pin_data[1] = (-c.forward - c.right) + 100;//7 2 lforward
 
-		pin_data[2] = (c.up) + 100;//2 4
-		pin_data[3] = (c.up) + 100;//4 5
+		pin_data[2] = (c.up) + 100;//2 4 upf
+		pin_data[4] = (c.up) + 100;//4 5 upb
 	}
 	else // ROMuLuS
 	{
-		pin_data[0] = (c.forward + c.clockwise) + 100;//6 1
-		pin_data[1] = (c.forward - c.clockwise) + 100;//7 2
+		pin_data[0] = (c.forward - c.clockwise) + 100;//6 1
+		pin_data[1] = (c.forward + c.clockwise) + 100;//7 2
 
 		pin_data[2] = (c.up) + 100;//2 4
 		pin_data[3] = (c.up) + 100;//4 5
 	}
 }
 
-std::string serialize_data (std::array<unsigned char, 12> pin_data)
+std::string serialize_data (std::array<std::uint8_t, 12> pin_data)
 {
 	std::string serialized_data = "";
 	serialized_data.push_back((unsigned char) 255);
-	for (unsigned char i : pin_data) serialized_data.push_back(i);
+	for (auto i : pin_data) serialized_data.push_back((unsigned char) i);
 	return serialized_data;
 }

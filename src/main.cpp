@@ -5,33 +5,20 @@
 #include "stb_image.h"
 
 #include <glad/glad.h>
-//#include <GLFW/glfw3.h>
 #include <SDL.h>
 #include <SDL_keycode.h>
 
 #include "imgui_impl_sdl_gl3.h"
 
 #include <vector>
-using std::vector;
 #include <exception>
 #include <iostream>
 #include <string>
 #include <array>
-using std::string;
 
 #include "overseer.h"
 
 #include <chrono>
-
-int eventFilter( const SDL_Event *e )
-{
-    /*if( e->type == SDL_VIDEORESIZE )
-    {
-        SDL_SetVideoMode(e->resize.w,e->resize.h,0,SDL_ANYFORMAT | SDL_RESIZABLE);
-        draw();
-    }*/
-    return 1; // return 1 so all events are added to queue
-}
 
 int main (int, char**)
 {
@@ -40,8 +27,6 @@ int main (int, char**)
         printf("Error: %s\n", SDL_GetError());
         return -1;
     }
-
-    //SDL_SetEventFilter( &eventFilter );
 
     // Setup window
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
@@ -61,14 +46,10 @@ int main (int, char**)
 
 	ImGui::CreateContext();
     ImGuiIO& io = ImGui::GetIO(); (void)io;
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableKeyboard;  // Enable Keyboard Controls
-    //io.ConfigFlags |= ImGuiConfigFlags_NavEnableGamepad;   // Enable Gamepad Controls
 
     ImGui_ImplSdlGL3_Init(window);
 
-    // Setup style
     ImGui::StyleColorsDark();
-
 	ImGuiStyle& style = ImGui::GetStyle();
 	style.WindowRounding = 0.f;
 	style.Alpha = 1.f;
@@ -80,15 +61,14 @@ int main (int, char**)
 	serial::Serial port("");
 	port.setBaudrate(115200);
 
-	std::array<unsigned char, 12> pin_data;
+	std::array<uint8_t, 12> pin_data;
 
-	// Selected Joystick in Combo Box
 	Controls c;
 
-	int variableIndex = -1;
+	int joystick_index = -1;
 
-	int portIndex = -1;
-	bool portOpen = false;
+	int port_index = -1;
+	bool is_port_open = false;
 
 	int is_lemming = 0;
 
@@ -118,7 +98,7 @@ int main (int, char**)
     	double time = std::chrono::duration_cast<std::chrono::duration<double>>(key_now - key_last).count();
         const Uint8* currentKeyStates = SDL_GetKeyboardState( NULL );
 
-        int mdz = 25; //motor deadzone magnitude
+        int mdz = 25; //motor deadzone magnitude -- currently, the dead band appears to be around 4 times the intended magnitude. Please fix.
 		if( currentKeyStates[ SDL_SCANCODE_W ] )
 		{
 			if (c.forward < mdz) c.forward = mdz; 
@@ -181,43 +161,41 @@ int main (int, char**)
 
 		key_last = std::chrono::high_resolution_clock::now();
 
-		vector<serial::PortInfo> portinfo = serial::list_ports();
-
-
+		std::vector<serial::PortInfo> portinfo = serial::list_ports();
 
 		if (ImGui::BeginMainMenuBar())
 		{
 			ImGui::PushItemWidth(0.3f * window_w);
 
-			if (portIndex >= portinfo.size()) portIndex = -1;
-			if (ImGui::BeginCombo("Slave", std::string(portIndex >= 0? portinfo[portIndex].port : "<none>").c_str(), ImGuiComboFlags_NoArrowButton))
+			if (port_index >= portinfo.size()) port_index = -1;
+			if (ImGui::BeginCombo("Slave", std::string(port_index >= 0? portinfo[port_index].port : "<none>").c_str(), ImGuiComboFlags_NoArrowButton))
 			{
 				{
-					bool is_none_selected = portIndex == -1;
-					if (ImGui::Selectable("<none>", is_none_selected)) portIndex = -1;
+					bool is_none_selected = port_index == -1;
+					if (ImGui::Selectable("<none>", is_none_selected)) port_index = -1;
 					if (is_none_selected) ImGui::SetItemDefaultFocus();
 				}
 				for (int i = 0; i < portinfo.size(); ++i)
 				{
-					bool is_selected = portIndex == i;
-					if (ImGui::Selectable(portinfo[i].port.c_str(), is_selected)) portIndex = i;
+					bool is_selected = port_index == i;
+					if (ImGui::Selectable(portinfo[i].port.c_str(), is_selected)) port_index = i;
 					if (is_selected) ImGui::SetItemDefaultFocus();
 				}
 				ImGui::EndCombo();
 			}
 
-	    	if (variableIndex >= SDL_NumJoysticks()) variableIndex = -1;
-			if (ImGui::BeginCombo("Joystick", std::string(variableIndex >= 0? SDL_JoystickNameForIndex(variableIndex) : "<none>").c_str(), ImGuiComboFlags_NoArrowButton))
+	    	if (joystick_index >= SDL_NumJoysticks()) joystick_index = -1;
+			if (ImGui::BeginCombo("Joystick", std::string(joystick_index >= 0? SDL_JoystickNameForIndex(joystick_index) : "<none>").c_str(), ImGuiComboFlags_NoArrowButton))
 			{
 				{
-					bool is_none_selected = variableIndex == -1;
-					if (ImGui::Selectable("<none>", is_none_selected)) variableIndex = -1;
+					bool is_none_selected = joystick_index == -1;
+					if (ImGui::Selectable("<none>", is_none_selected)) joystick_index = -1;
 					if (is_none_selected) ImGui::SetItemDefaultFocus();
 				}
 				for (int i = 0; i < SDL_NumJoysticks(); ++i)
 				{
-					bool is_selected = variableIndex == i;
-					if (ImGui::Selectable(SDL_JoystickNameForIndex(i), is_selected)) variableIndex = i;
+					bool is_selected = joystick_index == i;
+					if (ImGui::Selectable(SDL_JoystickNameForIndex(i), is_selected)) joystick_index = i;
 					if (is_selected) ImGui::SetItemDefaultFocus();
 				}
 				ImGui::EndCombo();
@@ -232,17 +210,13 @@ int main (int, char**)
 		ImGui::SetNextWindowPos(ImVec2(0.f, ImGui::GetFrameHeight()), ImGuiSetCond_Always);
 		ImGui::Begin("Console", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 
-			ImGui::Text("Time duration: %.4f", time);
-
-		ImGui::Text("Application running at %.1f FPS", ImGui::GetIO().Framerate);
-
 		ImGui::RadioButton("Saw", &is_lemming, 0); ImGui::SameLine();
 		ImGui::RadioButton("Lem", &is_lemming, 1); ImGui::SameLine();
 		ImGui::RadioButton("Romulus", &is_lemming, 2);
 
-		if (variableIndex >= -1)
+		if (joystick_index >= -1)
 		{
-			SDL_Joystick* joy = SDL_JoystickOpen(variableIndex);
+			SDL_Joystick* joy = SDL_JoystickOpen(joystick_index);
 
 			if (joy)
 			{
@@ -259,19 +233,20 @@ int main (int, char**)
 
 		ImGui::PushItemWidth(-1);
 
-		int max = 50;
+		int max = 100;
+
 
 		c.forward = c.forward > max? max : c.forward < -max? -max : c.forward;
 		c.right = c.right > max? max : c.right < -max? -max : c.right;
 		c.up = c.up > max? max : c.up < -max? -max : c.up;
 		c.clockwise = c.clockwise > max? max : c.clockwise < -max? -max : c.clockwise;
-		c.moclaw = c.moclaw > max? max : c.moclaw < -max? -max : c.moclaw;
+		c.moclaw = c.moclaw > 15? 15 : c.moclaw < -15? -15 : c.moclaw;
 
 		ImGui::SliderFloat("Forward", &c.forward, -100.f, 100.f);
 		ImGui::SliderFloat("Right", &c.right, -100.f, 100.f);
 		ImGui::SliderFloat("Up", &c.up, -100.f, 100.f);
 		ImGui::SliderFloat("Clockwise", &c.clockwise, -100.f, 100.f);
-		ImGui::SliderFloat("ClawOpening", &c.moclaw, -15.f, 15.f);
+		ImGui::SliderFloat("ClawOpening", &c.moclaw, -100.f, 100.f);
 
 		serialize_controls(pin_data, c, is_lemming);
 
@@ -279,12 +254,12 @@ int main (int, char**)
 
 		try
 		{
-			if (portIndex != -1)
+			if (port_index != -1)
 			{
-				if (!portOpen)
+				if (!is_port_open)
 				{
-					portOpen = true;
-					prt.setPort(portinfo[portIndex].port);
+					is_port_open = true;
+					prt.setPort(portinfo[port_index].port);
 					prt.open();
 				}
 
@@ -292,17 +267,17 @@ int main (int, char**)
 			}
 			else
 			{
-				portOpen = false;
+				is_port_open = false;
 				prt.close();
 				prt.setPort("");
 			}
 		}
 		catch (std::exception e)
 		{
-			portOpen = false;
+			is_port_open = false;
 			prt.close();
 			prt.setPort("");
-			portIndex = -1;
+			port_index = -1;
 		}
 
 		ImGui::End();

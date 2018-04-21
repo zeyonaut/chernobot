@@ -1,7 +1,0 @@
-/*
-
-include panel/input-assigner
-
-
-
-*/
