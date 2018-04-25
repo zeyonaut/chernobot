@@ -20,7 +20,6 @@ elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
 	endif()
 endif()
 
-# Look up GLFW
 find_package(SDL2 REQUIRED)
 
 # Build executable
@@ -29,6 +28,7 @@ include_directories(${SDL2_INCLUDE_DIR})
 include_directories(${Chernobot_SOURCE_DIR}/ext/glad/include)
 include_directories(${Chernobot_SOURCE_DIR}/ext/imgui)
 include_directories(${Chernobot_SOURCE_DIR}/ext/serial/include)
+include_directories(${Chernobot_SOURCE_DIR}/ext/rs232)
 
 add_executable(Chernobot src/main.cpp)
 
@@ -38,6 +38,8 @@ file(GLOB Imgui_SRC "ext/imgui/*.cpp")
 target_sources(Chernobot PUBLIC ${Imgui_SRC})
 file(GLOB_RECURSE Serial_SRC "ext/serial/src/*.cc")
 target_sources(Chernobot PUBLIC ${Serial_SRC})
+file(GLOB_RECURSE Rs232_SRC "ext/rs232/*.c")
+target_sources(Chernobot PUBLIC ${Rs232_SRC})
 target_sources(Chernobot PUBLIC ${Chernobot_SOURCE_DIR}/ext/glad/src/glad.c)
 
 target_link_libraries(Chernobot ${SDL2_LIBRARY})

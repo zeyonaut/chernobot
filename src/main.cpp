@@ -13,7 +13,7 @@
 #include <vector>
 #include <exception>
 #include <iostream>
-#include <string>
+#include <string> 
 #include <array>
 
 #include "overseer.h"
@@ -163,43 +163,10 @@ int main (int, char**)
 
 		std::vector<serial::PortInfo> portinfo = serial::list_ports();
 
+		//TODO: No need for main menu now. Be aware that the next window stars a few pixels below the top to account for the main menu.
 		if (ImGui::BeginMainMenuBar())
 		{
 			ImGui::PushItemWidth(0.3f * window_w);
-
-			if (port_index >= portinfo.size()) port_index = -1;
-			if (ImGui::BeginCombo("Slave", std::string(port_index >= 0? portinfo[port_index].port : "<none>").c_str(), ImGuiComboFlags_NoArrowButton))
-			{
-				{
-					bool is_none_selected = port_index == -1;
-					if (ImGui::Selectable("<none>", is_none_selected)) port_index = -1;
-					if (is_none_selected) ImGui::SetItemDefaultFocus();
-				}
-				for (int i = 0; i < portinfo.size(); ++i)
-				{
-					bool is_selected = port_index == i;
-					if (ImGui::Selectable(portinfo[i].port.c_str(), is_selected)) port_index = i;
-					if (is_selected) ImGui::SetItemDefaultFocus();
-				}
-				ImGui::EndCombo();
-			}
-
-	    	if (joystick_index >= SDL_NumJoysticks()) joystick_index = -1;
-			if (ImGui::BeginCombo("Joystick", std::string(joystick_index >= 0? SDL_JoystickNameForIndex(joystick_index) : "<none>").c_str(), ImGuiComboFlags_NoArrowButton))
-			{
-				{
-					bool is_none_selected = joystick_index == -1;
-					if (ImGui::Selectable("<none>", is_none_selected)) joystick_index = -1;
-					if (is_none_selected) ImGui::SetItemDefaultFocus();
-				}
-				for (int i = 0; i < SDL_NumJoysticks(); ++i)
-				{
-					bool is_selected = joystick_index == i;
-					if (ImGui::Selectable(SDL_JoystickNameForIndex(i), is_selected)) joystick_index = i;
-					if (is_selected) ImGui::SetItemDefaultFocus();
-				}
-				ImGui::EndCombo();
-			}
 
 			ImGui::PopItemWidth();
 
@@ -209,6 +176,21 @@ int main (int, char**)
 		ImGui::SetNextWindowSize(ImVec2(window_w, window_h), ImGuiSetCond_Always);
 		ImGui::SetNextWindowPos(ImVec2(0.f, ImGui::GetFrameHeight()), ImGuiSetCond_Always);
 		ImGui::Begin("Console", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+
+		//ImGui::ListBox("listbox\n(single select)", &listbox_item_current, listbox_items, IM_ARRAYSIZE(listbox_items), 4);
+
+		//TODO? i thought we needed to track the names but it looks like that won't be necessary - some testing appears that it somehow preserves integrity.
+		if (port_index >= portinfo.size()) port_index = -1;
+		ImGui::ListBoxHeader("Slave", portinfo.size() + 1);
+		if (ImGui::Selectable("<none>", port_index == -1)) port_index = -1;
+		for (int i = 0; i < portinfo.size(); ++i) if (ImGui::Selectable(portinfo[i].port.c_str(), port_index == i)) port_index = i;
+		ImGui::ListBoxFooter();
+
+		if (joystick_index >= SDL_NumJoysticks()) joystick_index = -1;
+		ImGui::ListBoxHeader("Joystick", SDL_NumJoysticks() + 1);
+		if (ImGui::Selectable("<none>", joystick_index == -1)) joystick_index = -1;
+		for (int i = 0; i < SDL_NumJoysticks(); ++i) if (ImGui::Selectable(SDL_JoystickNameForIndex(i), joystick_index == i)) joystick_index = i;
+		ImGui::ListBoxFooter();
 
 		ImGui::RadioButton("Saw", &is_lemming, 0); ImGui::SameLine();
 		ImGui::RadioButton("Lem", &is_lemming, 1); ImGui::SameLine();
