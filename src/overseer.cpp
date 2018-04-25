@@ -95,20 +95,32 @@ void serialize_controls(std::array<std::uint8_t, 12>& pin_data, const Controls& 
 		pin_data[2] = c.moclaw + 100;
 	}
 	else if (botflag == 1) //Lem
-	{
+	{/*
 		pin_data[0] = (-c.forward + c.right) + 100;//6 1 rforward
 		pin_data[1] = (-c.forward - c.right) + 100;//7 2 lforward
 
 		pin_data[2] = (c.up) + 100;//2 4 upf
-		pin_data[4] = (c.up) + 100;//4 5 upb
+		pin_data[4] = (c.up) + 100;//4 5 upb*/
 	}
 	else // ROMuLuS
 	{
-		pin_data[0] = (c.forward - c.clockwise) + 100;//6 1
-		pin_data[1] = (c.forward + c.clockwise) + 100;//7 2
+		int rmotor = (c.forward - c.clockwise);
+		int lmotor = (c.forward + c.clockwise);
+		int umotor = (c.up);
 
-		pin_data[2] = (c.up) + 100;//2 4
-		pin_data[3] = (c.up) + 100;//4 5
+		absolutely_clamp(rmotor, 100);
+		absolutely_clamp(lmotor, 100);
+		absolutely_clamp(umotor, 100);
+
+		pin_data[0] = (rmotor) + 100;//6 1 //right motor
+		pin_data[1] = (lmotor) + 100;//7 2 //left motor
+
+		pin_data[2] = (umotor) + 100;//2 4
+		pin_data[3] = (umotor) + 100;//4 5
+
+		ImGui::Text("Left Motor: %d", lmotor);
+		ImGui::Text("Right Motor: %d", rmotor);
+		ImGui::Text("Up Motor: %d", umotor);
 	}
 }
 
