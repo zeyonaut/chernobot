@@ -75,14 +75,14 @@ void serialize_controls(std::array<std::uint8_t, 12>& pin_data, const Controls& 
 		absolutely_clamp(bright, 100);
 		absolutely_clamp(lvert, 100);
 		absolutely_clamp(rvert, 100);
-
+		/*
 		ImGui::Text("Forward-Left Motor: %d", fleft);
 		ImGui::Text("Forward-Right Motor: %d", fright);
 		ImGui::Text("Backward-Left Motor: %d", bleft);
 		ImGui::Text("Backward-Right Motor: %d", bright);
 		ImGui::Text("Left-Up Motor: %d", lvert);
 		ImGui::Text("Right-Up Motor: %d", rvert);
-
+	*/
 		pin_data[0] = -1 * bleft + 100;//6 1 //not reversed because backwards config and counterclockwise config cancels each other out //reversed due to wiring minutia
 		pin_data[1] = rvert + 100;
 		
@@ -118,9 +118,11 @@ void serialize_controls(std::array<std::uint8_t, 12>& pin_data, const Controls& 
 		pin_data[2] = (umotor) + 100;//2 4
 		pin_data[3] = (umotor) + 100;//4 5
 
+		pin_data[4] = c.moclaw + 100;
+/*
 		ImGui::Text("Left Motor: %d", lmotor);
 		ImGui::Text("Right Motor: %d", rmotor);
-		ImGui::Text("Up Motor: %d", umotor);
+		ImGui::Text("Up Motor: %d", umotor);*/
 	}
 }
 
