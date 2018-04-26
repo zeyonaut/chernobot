@@ -20,7 +20,6 @@
 
 #include <chrono>
 
-
 #include <cmath>
 
 int main (int, char**)
@@ -92,22 +91,25 @@ int main (int, char**)
 
 	int w;
 	int h;
+	bool is_error = false;
 	{
 		int comp;
 		unsigned char* image = stbi_load("../res/lake.png", &w, &h, &comp, STBI_rgb_alpha);
 
-		if(image == nullptr) {std::cout << "NULL\n";}
+		if(image == nullptr) {std::cout << "ERR: CWD is not a child directory of chernobot root. Please run from tmp or bin.\n"; is_error = true;}
+		else
+		{
+			glGenTextures(1, &m_texture);
+			glBindTexture(GL_TEXTURE_2D, m_texture);
 
-		glGenTextures(1, &m_texture);
-		glBindTexture(GL_TEXTURE_2D, m_texture);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
+			glBindTexture(GL_TEXTURE_2D, 0);
 
-		glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
-		glBindTexture(GL_TEXTURE_2D, 0);
-
-		stbi_image_free(image);
+			stbi_image_free(image);
+		}
 	}
 
 	const float PI = 3.1415926;
@@ -231,18 +233,6 @@ int main (int, char**)
 			IMGUI DEBUGINFO
 		*/
 
-		/*if (ImGui::BeginMainMenuBar())
-		{
-			ImGui::PushItemWidth(0.3f * window_w);
-
-			ImGui::RadioButton("Pilot", &mode, 0); ImGui::SameLine();
-			ImGui::RadioButton("Crash Calculator", &mode, 1);
-
-			ImGui::PopItemWidth();
-
-			ImGui::EndMainMenuBar();
-		}*/
-
 		std::vector<serial::PortInfo> portinfo = serial::list_ports();
 
 			//TODO: No need for main menu now. Be aware that the next window stars a few pixels below the top to account for the main menu.
@@ -347,46 +337,45 @@ int main (int, char**)
 			ImGui::Text("II.3. Wind Vector: [%d] m, heading [%d]", (int)(wind_r + 0.5), (int)(direction - 180) % 360);
 			ImGui::Text("III. Power Generated: [%.4f] MW", power_generated);
 
-			ImGui::NewLine();
-			ImGui::Text("Flight Data Preview:");
-			ImGui::Separator();
-
-			int content_width = ImGui::GetWindowWidth() - ImGui::GetStyle().ScrollbarSize - 20;
-			
-			float scalefactor = content_width /(1000.f * 15.f); /*Given a distance in meters, times one km/1000 m, times one width/15 km then multiply by contentregion/width to get the distance in content regions*/
-
-			if (ImGui::RadioButton("NAS Sand Point", is_takeoff_sand_point)) is_takeoff_sand_point = true; ImGui::SameLine();
-			if (ImGui::RadioButton("Renton Airfield", !is_takeoff_sand_point)) is_takeoff_sand_point = false;
-			
-			ImVec2 orig = ImGui::GetCursorScreenPos(); //top left
-
-			ImGui::Image((ImTextureID)m_texture, ImVec2(content_width, h * content_width/w), ImVec2(0,0), ImVec2(1,1), ImVec4(255,255,255,255), ImVec4(255,255,255,0));
-
-			ImDrawList* draw_list = ImGui::GetWindowDrawList();
-			draw_list->PushClipRect(orig, ImVec2(orig.x + content_width, orig.y + h * content_width/w), false);
-			if (is_takeoff_sand_point)
+			if (!is_error)
 			{
-				orig.x += scalefactor * 8507.692;
-				orig.y += scalefactor * 8353.846;
-			}
-			else
-			{
-				orig.x += scalefactor * 10692.307;
-				orig.y += scalefactor * 27615.384;
-			}
 
-			//draw_list->AddLine(ImGui::GetMousePos(), ImVec2(ImGui::GetMousePos().x + scalefactor * 3999, ImGui::GetMousePos().y - scalefactor * 3999), ImColor(0, 255, 0, 255), 6);
-			draw_list->AddLine(orig, ImVec2(orig.x + scalefactor * (airvec_east), orig.y - scalefactor * (airvec_north)), ImColor(0, 255, 0, 255), 6);
-			draw_list->AddLine(ImVec2(orig.x + scalefactor * (airvec_east), orig.y - scalefactor * (airvec_north)), ImVec2(orig.x + scalefactor * (airvec_east + desvec_east), orig.y - scalefactor * (airvec_north + desvec_north)), ImColor(255, 0, 0, 255), 6);
-			draw_list->AddLine(ImVec2(orig.x + scalefactor * (airvec_east + desvec_east), orig.y - scalefactor * (airvec_north + desvec_north)), ImVec2(orig.x + scalefactor * (airvec_east + desvec_east + wind_east), orig.y - scalefactor * (airvec_north + desvec_north + wind_north)), ImColor(0, 0, 255, 255), 6);
-			draw_list->PopClipRect();
+				ImGui::NewLine();
+				ImGui::Text("Flight Data Preview:");
+				ImGui::Separator();
+
+				int content_width = ImGui::GetWindowWidth() - ImGui::GetStyle().ScrollbarSize - 20;
+				
+				float scalefactor = content_width /(1000.f * 15.f); /*Given a distance in meters, times one km/1000 m, times one width/15 km then multiply by contentregion/width to get the distance in content regions*/
+
+				if (ImGui::RadioButton("NAS Sand Point", is_takeoff_sand_point)) is_takeoff_sand_point = true; ImGui::SameLine();
+				if (ImGui::RadioButton("Renton Airfield", !is_takeoff_sand_point)) is_takeoff_sand_point = false;
+				
+				ImVec2 orig = ImGui::GetCursorScreenPos(); //top left
+
+				ImGui::Image((ImTextureID)(uintptr_t)m_texture, ImVec2(content_width, h * content_width/w), ImVec2(0,0), ImVec2(1,1), ImVec4(255,255,255,255), ImVec4(255,255,255,0));
+
+				ImDrawList* draw_list = ImGui::GetWindowDrawList();
+				draw_list->PushClipRect(orig, ImVec2(orig.x + content_width, orig.y + h * content_width/w), false);
+				if (is_takeoff_sand_point)
+				{
+					orig.x += scalefactor * 8507.692;
+					orig.y += scalefactor * 8353.846;
+				}
+				else
+				{
+					orig.x += scalefactor * 10692.307;
+					orig.y += scalefactor * 27615.384;
+				}
+
+				//draw_list->AddLine(ImGui::GetMousePos(), ImVec2(ImGui::GetMousePos().x + scalefactor * 3999, ImGui::GetMousePos().y - scalefactor * 3999), ImColor(0, 255, 0, 255), 6);
+				draw_list->AddLine(orig, ImVec2(orig.x + scalefactor * (airvec_east), orig.y - scalefactor * (airvec_north)), ImColor(0, 255, 0, 255), 6);
+				draw_list->AddLine(ImVec2(orig.x + scalefactor * (airvec_east), orig.y - scalefactor * (airvec_north)), ImVec2(orig.x + scalefactor * (airvec_east + desvec_east), orig.y - scalefactor * (airvec_north + desvec_north)), ImColor(255, 0, 0, 255), 6);
+				draw_list->AddLine(ImVec2(orig.x + scalefactor * (airvec_east + desvec_east), orig.y - scalefactor * (airvec_north + desvec_north)), ImVec2(orig.x + scalefactor * (airvec_east + desvec_east + wind_east), orig.y - scalefactor * (airvec_north + desvec_north + wind_north)), ImColor(0, 0, 255, 255), 6);
+				draw_list->PopClipRect();
+			}
 		}
 		ImGui::End();
-		/*else if (mode == 2) //TIDAL CALCULATOR
-		{
-
-		}*/
-
 		/*
 			SERIAL COMMUNICATION
 		*/
