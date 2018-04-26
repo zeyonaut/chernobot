@@ -22,6 +22,12 @@
 
 #include <cmath>
 
+#if defined (__APPLE__)
+#include <mach-o/dyld.h>
+#include <sys/param.h>
+#include <libgen.h>
+#endif
+
 int main (int, char**)
 {
 	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK) != 0)
@@ -89,12 +95,33 @@ int main (int, char**)
 
 	bool is_takeoff_sand_point = true;
 
+	bool is_error = false;
+
+	std::string img_path = "../res/lake.png";
+
+#if defined (__APPLE__)
+	char realp[1024];
+	char path[1024];
+	uint32_t size = sizeof(path);
+	if (_NSGetExecutablePath(path, &size) == 0)
+	{
+		realpath(std::string(dirname(path)).append("/..").c_str(), realp);
+	    printf("image path is %s\n", realp);
+	    img_path = std::string(realp).append("/res/lake.png");
+	}
+	else
+	{
+	    printf("buffer too small; need size %u\n", size);
+	    is_error = true;
+	}
+#endif
+
 	int w;
 	int h;
-	bool is_error = false;
+	if (!is_error)
 	{
 		int comp;
-		unsigned char* image = stbi_load("../res/lake.png", &w, &h, &comp, STBI_rgb_alpha);
+		unsigned char* image = stbi_load(img_path.c_str(), &w, &h, &comp, STBI_rgb_alpha);
 
 		if(image == nullptr) {std::cout << "ERR: CWD is not a child directory of chernobot root. Please run from tmp or bin.\n"; is_error = true;}
 		else
@@ -425,6 +452,10 @@ int main (int, char**)
 	SDL_GL_DeleteContext(gl_context);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
+
+#if defined (__APPLE__)
+	//free(realp);
+#endif
 
 	return 0;
 }
