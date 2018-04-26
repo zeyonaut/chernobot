@@ -340,11 +340,15 @@ int main (int, char**)
 
 			float wind_north = wind_r * cos((int)(direction - 180) % 360 * PI/ 180);
 			float wind_east = wind_r * sin((int)(direction - 180) % 360 * PI/ 180);
+			float power_generated = no_of_turbines * 0.5 * (1025 * (pow(rotor_diameter / 2, 2) * PI) * pow((current_kn * 0.5144444444444), 3) * efficiency / (100 /*percent to ratio*/ * 1000000 /*watts to megawatts*/));
+			
+			ImGui::Text("II.1. Ascent Vector: [%d] m, heading [%d]", (int)(airvec_r + 0.5), (int)(heading));
+			ImGui::Text("II.2. Descent Vector: [%d] m, heading [%d]", (int)(desvec_r + 0.5), (int)(heading));
+			ImGui::Text("II.3. Wind Vector: [%d] m, heading [%d]", (int)(wind_r + 0.5), (int)(direction - 180) % 360);
+			ImGui::Text("III. Power Generated: [%.4f] MW", power_generated);
 
-			ImGui::Text("1. Ascent Vector: [%d] m, heading [%d]", (int)(airvec_r + 0.5), (int)(heading));
-			ImGui::Text("2. Descent Vector: [%d] m, heading [%d]", (int)(desvec_r + 0.5), (int)(heading));
-			ImGui::Text("3. Wind Vector: [%d] m, heading [%d]", (int)(wind_r + 0.5), (int)(direction - 180) % 360);
-
+			ImGui::NewLine();
+			ImGui::Text("Flight Data Preview:");
 			ImGui::Separator();
 
 			int content_width = ImGui::GetWindowWidth() - ImGui::GetStyle().ScrollbarSize - 20;
@@ -354,9 +358,6 @@ int main (int, char**)
 			if (ImGui::RadioButton("NAS Sand Point", is_takeoff_sand_point)) is_takeoff_sand_point = true; ImGui::SameLine();
 			if (ImGui::RadioButton("Renton Airfield", !is_takeoff_sand_point)) is_takeoff_sand_point = false;
 			
-			ImGui::Separator();
-			ImGui::NewLine();
-
 			ImVec2 orig = ImGui::GetCursorScreenPos(); //top left
 
 			ImGui::Image((ImTextureID)m_texture, ImVec2(content_width, h * content_width/w), ImVec2(0,0), ImVec2(1,1), ImVec4(255,255,255,255), ImVec4(255,255,255,0));
@@ -379,9 +380,6 @@ int main (int, char**)
 			draw_list->AddLine(ImVec2(orig.x + scalefactor * (airvec_east), orig.y - scalefactor * (airvec_north)), ImVec2(orig.x + scalefactor * (airvec_east + desvec_east), orig.y - scalefactor * (airvec_north + desvec_north)), ImColor(255, 0, 0, 255), 6);
 			draw_list->AddLine(ImVec2(orig.x + scalefactor * (airvec_east + desvec_east), orig.y - scalefactor * (airvec_north + desvec_north)), ImVec2(orig.x + scalefactor * (airvec_east + desvec_east + wind_east), orig.y - scalefactor * (airvec_north + desvec_north + wind_north)), ImColor(0, 0, 255, 255), 6);
 			draw_list->PopClipRect();
-
-			float power_generated = no_of_turbines * 0.5 * (1025 * (pow(rotor_diameter / 2, 2) * PI) * pow((current_kn * 0.5144444444444), 3) * efficiency / (100 /*percent to ratio*/ * 1000000 /*watts to megawatts*/));
-			ImGui::Text("> Power Generated: [%.4f] MW", power_generated);
 		}
 		ImGui::End();
 		/*else if (mode == 2) //TIDAL CALCULATOR
