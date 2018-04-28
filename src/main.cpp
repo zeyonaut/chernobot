@@ -16,6 +16,7 @@
 #include <string> 
 #include <array>
 
+#include "hpcp/fs.hpp"
 #include "overseer.h"
 
 #include <chrono>
@@ -24,7 +25,7 @@
 
 #if defined (__APPLE__)
 #include <mach-o/dyld.h>
-#include <sys/param.h>
+//#include <sys/param.h>
 #include <libgen.h>
 #endif
 
@@ -78,7 +79,7 @@ int main (int, char**)
 	int port_index = -1;
 	bool is_port_open = false;
 
-	int is_lemming = 0;
+	int is_lemming = 2;
 	int mode = 0;
 
 	serial::Serial prt("");
@@ -86,10 +87,8 @@ int main (int, char**)
 
 	bool running = true;
 
-	auto key_last = std::chrono::high_resolution_clock::now();
-	auto key_now = std::chrono::high_resolution_clock::now();
-
-	int acceleration = 33; //percent per second
+	int acceleration = 33; 
+	int eleveration = 100;//percent per second
 
 	GLuint m_texture = 0;
 
@@ -99,20 +98,32 @@ int main (int, char**)
 
 	std::string img_path = "../res/lake.png";
 
+	int elevate_direction = 0;
+	int elevate_magnitude = 0;
+	float elevate_amt = 0;
+
+	bool is_using_bool_elev = true;
+
+	/*
+	- elevate_magnitude is the unsigned intp of the (sensitivity) axis. 
+	- elevate direction is either hat_switch
+	*/
+
 #if defined (__APPLE__)
-	char realp[1024];
-	char path[1024];
-	uint32_t size = sizeof(path);
-	if (_NSGetExecutablePath(path, &size) == 0)
 	{
-		realpath(std::string(dirname(path)).append("/..").c_str(), realp);
-	    printf("image path is %s\n", realp);
-	    img_path = std::string(realp).append("/res/lake.png");
-	}
-	else
-	{
-	    printf("buffer too small; need size %u\n", size);
-	    is_error = true;
+		char* real_path;
+		char* path;
+		uint32_t size = 1024;
+
+		do {free(path); path = (char*) malloc(size);} //TODO: Check for null.
+		while (_NSGetExecutablePath(path, &size) != 0);
+
+		real_path = (char*) malloc(size); //TODO: Check for null.
+		realpath(hpcp::get_directory(path).append("../res/lake.png").c_str(), real_path); //TODO: use safer function for path canonicalization.
+		img_path = std::string(real_path);
+
+		free(path);
+		free(real_path);
 	}
 #endif
 
@@ -123,7 +134,7 @@ int main (int, char**)
 		int comp;
 		unsigned char* image = stbi_load(img_path.c_str(), &w, &h, &comp, STBI_rgb_alpha);
 
-		if(image == nullptr) {std::cout << "ERR: CWD is not a child directory of chernobot root. Please run from tmp or bin.\n"; is_error = true;}
+		if(image == nullptr) {std::cout << "ERR: the executable is not in a child directory of chernobot root. Please run from tmp or bin.\n"; is_error = true;}
 		else
 		{
 			glGenTextures(1, &m_texture);
@@ -154,6 +165,10 @@ int main (int, char**)
 			float rotor_diameter = 14;
 			float current_kn = 4.5;
 			float efficiency = 35;
+
+
+	auto key_last = std::chrono::high_resolution_clock::now();
+	auto key_now = std::chrono::high_resolution_clock::now();
 
 	while (running)
 	{	
@@ -237,8 +252,6 @@ int main (int, char**)
 		}
 		else c.moclaw = 0;
 
-		key_last = std::chrono::high_resolution_clock::now();
-
 		if (joystick_index >= -1)
 		{
 			SDL_Joystick* joy = SDL_JoystickOpen(joystick_index);
@@ -247,14 +260,45 @@ int main (int, char**)
 			{
 				if (SDL_JoystickNumAxes(joy) > 3)
 				{
+					
 					c.forward = -1 * (int) (100.f * SDL_JoystickGetAxis(joy, 1)/32767.f);
 					c.right = (int) (100.f * SDL_JoystickGetAxis(joy, 0)/32767.f);
 					c.up = -1 * (int) (100.f * SDL_JoystickGetAxis(joy, 3)/32767.f);
 					c.clockwise = (int) (100.f * SDL_JoystickGetAxis(joy, 2)/32767.f);
+
+					elevate_magnitude = 100 - (int)(100 * ((32768 + (int)SDL_JoystickGetAxis(joy, 3))/65535.f));
 				}
+
+				if (SDL_JoystickNumButtons(joy) >= 2)
+				{
+					//TODO: null cancellation
+					if(SDL_JoystickGetButton(joy, 0) == 1 && SDL_JoystickGetButton(joy, 1) == 0) elevate_direction = -1;
+					else if(SDL_JoystickGetButton(joy, 0) == 0 && SDL_JoystickGetButton(joy, 1) == 1) elevate_direction = 1;
+					else elevate_direction = 0;
+				}
+
 				SDL_JoystickClose(joy);
 			}
 		}
+
+		if (elevate_direction != 0)
+		{
+			if (elevate_direction > 0 && elevate_amt > elevate_magnitude) elevate_amt += eleveration * -time;
+			else if (elevate_direction < 0 && elevate_amt < -elevate_magnitude) elevate_amt +=  eleveration * time;
+			else elevate_amt += eleveration * time * elevate_direction;
+		}
+		else
+		{
+			if ((int) elevate_amt > 0) elevate_amt -= eleveration * time;
+			else if ((int) elevate_amt < 0) elevate_amt += eleveration * time;
+			else elevate_amt = 0;
+		}
+
+		c.up = (int)elevate_amt;
+
+
+
+		key_last = std::chrono::high_resolution_clock::now();
 
 		/*
 			IMGUI DEBUGINFO
@@ -272,8 +316,6 @@ int main (int, char**)
 		ImGui::Begin("Pilot Console", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 		//if (mode == 0) //pilot
 		{
-			//ImGui::ListBox("listbox\n(single select)", &listbox_item_current, listbox_items, IM_ARRAYSIZE(listbox_items), 4);
-
 			//TODO? i thought we needed to track the names but it looks like that won't be necessary - some testing appears that it somehow preserves integrity.
 			if (port_index >= portinfo.size()) port_index = -1;
 			ImGui::ListBoxHeader("Slave", portinfo.size() + 1);
@@ -293,7 +335,14 @@ int main (int, char**)
 
 			ImGui::PushItemWidth(0);
 
+			//*
 			int max = 100;
+			/*/
+			int max = 400;
+			//*/
+
+			if (ImGui::RadioButton("Use Trigger Elevation", is_using_bool_elev)) is_using_bool_elev = true; ImGui::SameLine();
+			if (ImGui::RadioButton("Be a Scrub", !is_using_bool_elev)) is_using_bool_elev = false;
 
 			c.forward = c.forward > max? max : c.forward < -max? -max : c.forward;
 			c.right = c.right > max? max : c.right < -max? -max : c.right;
@@ -301,11 +350,11 @@ int main (int, char**)
 			c.clockwise = c.clockwise > max? max : c.clockwise < -max? -max : c.clockwise;
 			c.moclaw = c.moclaw > 15? 15 : c.moclaw < -15? -15 : c.moclaw;
 
-			ImGui::SliderFloat("Forward", &c.forward, -100.f, 100.f);
-			ImGui::SliderFloat("Right", &c.right, -100.f, 100.f);
-			ImGui::SliderFloat("Up", &c.up, -100.f, 100.f);
-			ImGui::SliderFloat("Clockwise", &c.clockwise, -100.f, 100.f);
-			ImGui::SliderFloat("ClawOpening", &c.moclaw, -100.f, 100.f);
+			ImGui::SliderFloat("Forward", &c.forward, -max, max);
+			ImGui::SliderFloat("Right", &c.right, -max, max);
+			ImGui::SliderFloat("Up", &c.up, -max, max);
+			ImGui::SliderFloat("Clockwise", &c.clockwise, -max, max);
+			ImGui::SliderFloat("ClawOpening", &c.moclaw, -max, max);
 
 			serialize_controls(pin_data, c, is_lemming);
 

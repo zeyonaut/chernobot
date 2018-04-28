@@ -4,6 +4,10 @@
 Servo s[12];
 unsigned char buffer[13];
 
+/*unsigned char left;
+unsigned char right;
+bool has_left_just_been_filled;*/
+
 void setup () 
 {
 	for (int i = 0; i < 12; ++i)
@@ -11,6 +15,7 @@ void setup ()
 		s[i].attach(i+2); // pins 0 and 1 reserved for serial communication.
 	}
 	Serial.begin(115200);
+	//has_left_just_been_filled = false;
 }
 
 unsigned int pin_index = 0;

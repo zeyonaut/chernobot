@@ -57,6 +57,7 @@ void absolutely_clamp(int& i, int magnitude)
 	i = i > magnitude? magnitude : i < -magnitude? -magnitude : i;
 }
 
+//*
 void serialize_controls(std::array<std::uint8_t, 12>& pin_data, const Controls& c, int botflag)
 {
 	pin_data.fill(0 + 100);
@@ -75,14 +76,7 @@ void serialize_controls(std::array<std::uint8_t, 12>& pin_data, const Controls& 
 		absolutely_clamp(bright, 100);
 		absolutely_clamp(lvert, 100);
 		absolutely_clamp(rvert, 100);
-		/*
-		ImGui::Text("Forward-Left Motor: %d", fleft);
-		ImGui::Text("Forward-Right Motor: %d", fright);
-		ImGui::Text("Backward-Left Motor: %d", bleft);
-		ImGui::Text("Backward-Right Motor: %d", bright);
-		ImGui::Text("Left-Up Motor: %d", lvert);
-		ImGui::Text("Right-Up Motor: %d", rvert);
-	*/
+
 		pin_data[0] = -1 * bleft + 100;//6 1 //not reversed because backwards config and counterclockwise config cancels each other out //reversed due to wiring minutia
 		pin_data[1] = rvert + 100;
 		
@@ -93,14 +87,6 @@ void serialize_controls(std::array<std::uint8_t, 12>& pin_data, const Controls& 
 		pin_data[6] = (-fleft) + 100;//3 7 //reversed due to ccwise config
 
 		pin_data[2] = c.moclaw + 100;
-	}
-	else if (botflag == 1) //Lem
-	{/*
-		pin_data[0] = (-c.forward + c.right) + 100;//6 1 rforward
-		pin_data[1] = (-c.forward - c.right) + 100;//7 2 lforward
-
-		pin_data[2] = (c.up) + 100;//2 4 upf
-		pin_data[4] = (c.up) + 100;//4 5 upb*/
 	}
 	else // ROMuLuS
 	{
@@ -119,13 +105,61 @@ void serialize_controls(std::array<std::uint8_t, 12>& pin_data, const Controls& 
 		pin_data[3] = (umotor) + 100;//4 5
 
 		pin_data[4] = c.moclaw + 100;
-/*
-		ImGui::Text("Left Motor: %d", lmotor);
-		ImGui::Text("Right Motor: %d", rmotor);
-		ImGui::Text("Up Motor: %d", umotor);*/
 	}
 }
+/*/
+void serialize_controls(std::array<std::uint16_t, 12>& pin_data, const Controls& c, int botflag)
+{
+	pin_data.fill(1500);
+	if (botflag == 0) //Saw
+	{
+		int fleft = magnitude(c.right, c.forward, fleft_motor) + c.clockwise;
+		int fright = magnitude(c.right, c.forward, fright_motor) - c.clockwise;
+		int bleft = magnitude(c.right, c.forward, bleft_motor) + c.clockwise;
+		int bright = magnitude(c.right, c.forward, bright_motor) - c.clockwise;
+		int lvert = c.up;
+		int rvert = c.up;
 
+		absolutely_clamp(fleft, 400);
+		absolutely_clamp(fright, 400);
+		absolutely_clamp(bleft, 400);
+		absolutely_clamp(bright, 400);
+		absolutely_clamp(lvert, 400);
+		absolutely_clamp(rvert, 400);
+
+		pin_data[0] = 1500 - bleft;//6 1 //not reversed because backwards config and counterclockwise config cancels each other out //reversed due to wiring minutia
+		pin_data[1] = 1500 + rvert;
+		
+		pin_data[3] = 1500 - fright;//2 4 //reversed due to wiring minutia
+		pin_data[4] = 1500 - bright;//4 5 //reversed due to backwards configuration
+
+		pin_data[5] = 1500 - lvert;//5 6 //reversed due to ccwise config
+		pin_data[6] = 1500 - fleft;//3 7 //reversed due to ccwise config
+
+		pin_data[2] = 1500 + c.moclaw;
+	}
+	else // ROMuLuS
+	{
+		int rmotor = (c.forward - c.clockwise);
+		int lmotor = (c.forward + c.clockwise);
+		int umotor = (c.up);
+
+		absolutely_clamp(rmotor, 400);
+		absolutely_clamp(lmotor, 400);
+		absolutely_clamp(umotor, 400);
+
+		pin_data[0] = 1500 + rmotor;//6 1 //right motor
+		pin_data[1] = 1500 + lmotor;//7 2 //left motor
+
+		pin_data[2] = 1500 + umotor;//2 4
+		pin_data[3] = 1500 + umotor;//4 5
+
+		pin_data[4] = 1500 + c.moclaw;
+	}
+}
+//*/
+
+//*
 std::string serialize_data (std::array<std::uint8_t, 12> pin_data)
 {
 	std::string serialized_data = "";
@@ -133,3 +167,16 @@ std::string serialize_data (std::array<std::uint8_t, 12> pin_data)
 	for (auto i : pin_data) serialized_data.push_back((unsigned char) i);
 	return serialized_data;
 }
+/*/
+std::string serialize_data (std::array<std::uint16_t, 12> pin_data)
+{
+	std::string serialized_data = "";
+	serialized_data.push_back((std::uint8_t) 255);
+	for (auto i : pin_data) 
+	{
+		serialized_data.push_back((std::uint8_t) (i/128));
+		serialized_data.push_back((std::uint8_t) (i%128));
+	}
+	return serialized_data;
+}
+//*/
