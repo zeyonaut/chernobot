@@ -113,10 +113,11 @@ int main (int, char**)
 	{
 		char* real_path;
 		char* path;
-		uint32_t size = 1024;
+		uint32_t size = 0;
 
-		do {free(path); path = (char*) malloc(size);} //TODO: Check for null.
-		while (_NSGetExecutablePath(path, &size) != 0);
+		_NSGetExecutablePath(path, &size);
+		path = (char*) malloc(size);
+		_NSGetExecutablePath(path, &size);
 
 		real_path = (char*) malloc(size); //TODO: Check for null.
 		realpath(hpcp::get_directory(path).append("../res/lake.png").c_str(), real_path); //TODO: use safer function for path canonicalization.
