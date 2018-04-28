@@ -264,7 +264,7 @@ int main (int, char**)
 					c.forward = -1 * (int) (100.f * SDL_JoystickGetAxis(joy, 1)/32767.f);
 					c.right = (int) (100.f * SDL_JoystickGetAxis(joy, 0)/32767.f);
 					c.up = -1 * (int) (100.f * SDL_JoystickGetAxis(joy, 3)/32767.f);
-					c.clockwise = (int) (100.f * SDL_JoystickGetAxis(joy, 2)/32767.f);
+					c.clockwise = (int) (50.f * SDL_JoystickGetAxis(joy, 2)/32767.f);
 
 					elevate_magnitude = 100 - (int)(100 * ((32768 + (int)SDL_JoystickGetAxis(joy, 3))/65535.f));
 				}
@@ -275,6 +275,13 @@ int main (int, char**)
 					if(SDL_JoystickGetButton(joy, 0) == 1 && SDL_JoystickGetButton(joy, 1) == 0) elevate_direction = -1;
 					else if(SDL_JoystickGetButton(joy, 0) == 0 && SDL_JoystickGetButton(joy, 1) == 1) elevate_direction = 1;
 					else elevate_direction = 0;
+				}
+
+				if (SDL_JoystickNumButtons(joy) >= 12)
+				{
+					//TODO: null cancellation
+					if(SDL_JoystickGetButton(joy, 10) == 1) c.clockwise = 3 * c.clockwise/2;
+					if(SDL_JoystickGetButton(joy, 11) == 1) c.clockwise =  2 * c.clockwise;
 				}
 
 				SDL_JoystickClose(joy);
@@ -295,8 +302,6 @@ int main (int, char**)
 		}
 
 		c.up = (int)elevate_amt;
-
-
 
 		key_last = std::chrono::high_resolution_clock::now();
 
@@ -359,6 +364,38 @@ int main (int, char**)
 			serialize_controls(pin_data, c, is_lemming);
 
 			ImGui::PopItemWidth();
+
+			/*
+			SERIAL COMMUNICATION
+			*/
+
+			try
+			{
+				if (port_index != -1)
+				{
+					if (!is_port_open)
+					{
+						is_port_open = true;
+						prt.setPort(portinfo[port_index].port);
+						prt.open();
+					}
+
+					if (prt.isOpen()) prt.write(serialize_data(pin_data));
+				}
+				else
+				{
+					is_port_open = false;
+					prt.close();
+					prt.setPort("");
+				}
+			}
+			catch (std::exception e)
+			{
+				is_port_open = false;
+				prt.close();
+				prt.setPort("");
+				port_index = -1;
+			}
 
 			ImGui::NewLine();
 			ImGui::Separator();
@@ -452,39 +489,6 @@ int main (int, char**)
 			}
 		}
 		ImGui::End();
-		/*
-			SERIAL COMMUNICATION
-		*/
-
-		try
-		{
-			if (port_index != -1)
-			{
-				if (!is_port_open)
-				{
-					is_port_open = true;
-					prt.setPort(portinfo[port_index].port);
-					prt.open();
-				}
-
-				if (prt.isOpen()) prt.write(serialize_data(pin_data));
-			}
-			else
-			{
-				is_port_open = false;
-				prt.close();
-				prt.setPort("");
-			}
-		}
-		catch (std::exception e)
-		{
-			is_port_open = false;
-			prt.close();
-			prt.setPort("");
-			port_index = -1;
-		}
-
-		
 
 		glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
 		glClear(GL_COLOR_BUFFER_BIT);
