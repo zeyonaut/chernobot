@@ -349,72 +349,82 @@ int main (int, char**)
 
 			ImGui::PushItemWidth(0);
 			
+			// STOPWATCH
+
 			ImGui::NewLine();
 			
 			bool stopwatch_state = ImGui::Button("Stopwatch");
 			ImGui::SameLine();
 			bool lap_state = ImGui::Button("Lap");
 			ImGui::SameLine();
-			if(ImGui::Button("Reset"))	{
+			if(ImGui::Button("Reset"))
+			{
 				inital_time = std::chrono::high_resolution_clock::now();
 				maintain_time_proper = std::chrono::high_resolution_clock::now() - std::chrono::high_resolution_clock::now();
 				maintain_time = 0;
 				lapped_seconds.clear();
 			}
 			ImGui::SameLine();
-			if(!clock_state)	{
-				if(stopwatch_state &&  !clock_state_previous)	{
+			int current_stopwatch;
+			if(!clock_state)
+			{
+				if(stopwatch_state && !clock_state_previous)
+				{
 					clock_state_previous = true;
-				}	else if(!stopwatch_state && clock_state_previous)	{
+				}
+				else if(!stopwatch_state && clock_state_previous)
+				{
 					inital_time = std::chrono::high_resolution_clock::now() - maintain_time_proper;
 					clock_state = true;
 					clock_state_previous = false;
 				}
 				ImGui::Text("Stopped");
-				if((int)((int)(maintain_time)%60) >= 10)	{
-					ImGui::Text("Stopwatch Time: %d:%d", (int)((int)(maintain_time)/60),(int)((int)(maintain_time)%60));
-				} else	{
-					ImGui::Text("Stopwatch Time: %d:0%d", (int)((int)(maintain_time)/60),(int)((int)(maintain_time)%60));
+			}
+			else
+			{
+				current_stopwatch = ((std::chrono::high_resolution_clock::now() - inital_time).count())/1000000000;
+				if(lap_state && !lap_state_previous)
+				{
+					lap_state_previous = true;
 				}
-			} else {
-				int current_stopwatch = ((std::chrono::high_resolution_clock::now() - inital_time).count())/1000000000;
-				if(stopwatch_state && !clock_state_previous)	{
+				else if(!lap_state && lap_state_previous)
+				{
+					lap_state_previous = false;
+					lapped_seconds.push_back(current_stopwatch);
+				}
+
+				if(stopwatch_state && !clock_state_previous)
+				{
 					clock_state_previous = true;
-				} else if(!stopwatch_state && clock_state_previous)	{
+				}
+				else if(!stopwatch_state && clock_state_previous)
+				{
 					maintain_time = current_stopwatch;
 					maintain_time_proper = std::chrono::high_resolution_clock::now() - inital_time;
 					clock_state = false;
 					clock_state_previous = false;
 				}
 				ImGui::Text("Running");
-				if((int)((int)(current_stopwatch)%60) >= 10)	{
-					ImGui::Text("Stopwatch Time: %d:%d", (int)((int)(current_stopwatch)/60),(int)((int)(current_stopwatch)%60));
-				} else	{
-					ImGui::Text("Stopwatch Time: %d:0%d", (int)((int)(current_stopwatch)/60),(int)((int)(current_stopwatch)%60));
-				}
-
-				if(lap_state && !lap_state_previous)	{
-					lap_state_previous = true;
-				} else if(!lap_state && lap_state_previous)	{
-					lap_state_previous = false;
-					lapped_seconds.push_back(current_stopwatch);
-				}
 			}
+
+			ImGui::Text("Stopwatch Time: %02d:%02d; Lap: %02d:%02d", ((int)(current_stopwatch)/60),((int)(current_stopwatch)%60), lapped_seconds.size()>0? (current_stopwatch - lapped_seconds[lapped_seconds.size()-1])/60 : current_stopwatch/60, lapped_seconds.size()>0? (current_stopwatch - lapped_seconds[lapped_seconds.size()-1]) % 60 : current_stopwatch % 60);
+
+			// LAP DISPLAY
 
 			ImGui::NewLine();
-		
-			for(int i = 1; i <= 5 ;i++)	{
-				if(lapped_seconds.size() + 1 > i)	{
-					if((int)((int)(lapped_seconds[lapped_seconds.size() - i])%60) >= 10)	{
-					ImGui::Text("Lap Time %d: %d:%d", (int)(lapped_seconds.size() - i + 1),(int)((int)(lapped_seconds[lapped_seconds.size() - i])/60), (int)((int)(lapped_seconds[lapped_seconds.size() - i])%60));
-					} else	{
-					ImGui::Text("Lap Time %d: %d:0%d", (int)(lapped_seconds.size() - i + 1),(int)((int)(lapped_seconds[lapped_seconds.size() - i])/60), (int)((int)(lapped_seconds[lapped_seconds.size() - i])%60));
-					}
+
+			for(int i = 1; i <= 5 ; i++)
+			{
+				if(lapped_seconds.size() + 1 > i)
+				{
+					ImGui::Text("Lap Time %02d: %02d:%02d", (int)(lapped_seconds.size() - i + 1),(int)((int)(lapped_seconds[lapped_seconds.size() - i])/60), (int)((int)(lapped_seconds[lapped_seconds.size() - i])%60));
 				}
 			}
 
-			if(lapped_seconds.size() <= 5)	{
-				for(int i = 0; i < 5 - lapped_seconds.size();i++)	{
+			if(lapped_seconds.size() <= 5)
+			{
+				for(int i = 0; i < 5 - lapped_seconds.size(); i++)
+				{
 					ImGui::NewLine();
 				}
 			}
