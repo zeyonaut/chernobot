@@ -2,11 +2,6 @@
 #include <stdint.h>
 
 Servo s[12];
-unsigned char buffer[13];
-
-/*unsigned char left;
-unsigned char right;
-bool has_left_just_been_filled;*/
 
 void setup () 
 {
@@ -15,33 +10,46 @@ void setup ()
 		s[i].attach(i+2); // pins 0 and 1 reserved for serial communication.
 	}
 	Serial.begin(115200);
-	//has_left_just_been_filled = false;
 }
 
 unsigned int pin_index = 0;
-unsigned char current_byte = 0;
 
-void loop() 
-{ 
+unsigned char current_byte = 0;
+uint16_t current_us = 0;
+bool are_first_seven_bits_filled = false;
+
+void loop()
+{
 	while (Serial.available() > 0)
 	{
 		current_byte = Serial.read();
 
-	switch (current_byte)
-	{
-	  case 255:
-		pin_index = 0;
-		continue;
-		
-	  default:
-		if (pin_index >= 12)
+		switch (current_byte)
 		{
-		  pin_index = 0;
-		  continue;
+			case 255:
+				pin_index = -1;
+				are_first_seven_bits_filled = false;
+				continue;
+
+			default: //TODO check first for first bit filled;
+				if (pin_index > 11)
+				{
+					pin_index = -1;
+					are_first_seven_bits_filled = false;
+					continue;
+				}
+
+				if (!are_first_seven_bits_filled)
+				{
+					++pin_index; current_us += 128 * current_byte;
+          are_first_seven_bits_filled = true;
+				}
+				else
+				{
+					current_us += current_byte;
+					s[pin_index].writeMicroseconds(current_us);
+				}
+				continue;
 		}
-		s[pin_index].writeMicroseconds(current_byte * 4 + 1100);
-		++pin_index;
-		continue;
-	}
 	}
 }

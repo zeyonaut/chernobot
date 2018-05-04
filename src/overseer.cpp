@@ -57,7 +57,7 @@ void absolutely_clamp(int& i, int magnitude)
 	i = i > magnitude? magnitude : i < -magnitude? -magnitude : i;
 }
 
-//*
+/*
 void serialize_controls(std::array<std::uint8_t, 12>& pin_data, const Controls& c, int botflag)
 {
 	pin_data.fill(0 + 100);
@@ -159,7 +159,7 @@ void serialize_controls(std::array<std::uint16_t, 12>& pin_data, const Controls&
 }
 //*/
 
-//*
+/*
 std::string serialize_data (std::array<std::uint8_t, 12> pin_data)
 {
 	std::string serialized_data = "";

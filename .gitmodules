@@ -4,6 +4,6 @@
 [submodule "ext/serial"]
 	path = ext/serial
 	url = https://github.com/wjwwood/serial
-[submodule "ext/rs232"]
-	path = ext/rs232
-	url = https://github.com/Marzac/rs232
+[submodule "ext/qfs-cpp"]
+	path = ext/qfs-cpp
+	url = https://github.com/hyperum/qfs-cpp

@@ -16,18 +16,12 @@
 #include <string> 
 #include <array>
 
-#include "hpcp/fs.hpp"
+#include <qfs-cpp/qfs.hpp>
 #include "overseer.h"
 
 #include <chrono>
 
 #include <cmath>
-
-#if defined (__APPLE__)
-#include <mach-o/dyld.h>
-//#include <sys/param.h>
-#include <libgen.h>
-#endif
 
 int main (int, char**)
 {
@@ -70,7 +64,7 @@ int main (int, char**)
 	serial::Serial port("");
 	port.setBaudrate(115200);
 
-	std::array<uint8_t, 12> pin_data;
+	std::array<uint16_t, 12> pin_data;
 
 	Controls c;
 
@@ -88,7 +82,7 @@ int main (int, char**)
 	bool running = true;
 
 	int acceleration = 33; 
-	int eleveration = 100;//percent per second
+	int eleveration = 400;//percent per second
 
 	GLuint m_texture = 0;
 
@@ -104,38 +98,14 @@ int main (int, char**)
 
 	bool is_using_bool_elev = true;
 
-	/*
-	- elevate_magnitude is the unsigned intp of the (sensitivity) axis. 
-	- elevate direction is either hat_switch
-	*/
-
-#if defined (__APPLE__)
-	{
-		char* real_path;
-		char* path;
-		uint32_t size = 0;
-
-		_NSGetExecutablePath(path, &size);
-		path = (char*) malloc(size);
-		_NSGetExecutablePath(path, &size);
-
-		real_path = (char*) malloc(size); //TODO: Check for null.
-		realpath(hpcp::get_directory(path).append("../res/lake.png").c_str(), real_path); //TODO: use safer function for path canonicalization.
-		img_path = std::string(real_path);
-
-		free(path);
-		free(real_path);
-	}
-#endif
-
 	int w;
 	int h;
 	if (!is_error)
 	{
 		int comp;
-		unsigned char* image = stbi_load(img_path.c_str(), &w, &h, &comp, STBI_rgb_alpha);
+		unsigned char* image = stbi_load(qfs::get_real_path(qfs::get_directory(qfs::get_executable_path()) + "../res/lake.png").c_str(), &w, &h, &comp, STBI_rgb_alpha);
 
-		if(image == nullptr) {std::cout << "ERR: the executable is not in a child directory of chernobot root. Please run from tmp or bin.\n"; is_error = true;}
+		if(image == nullptr) {std::cout << "ERR: lake.png is not in $EXECUTABLE_PATH/../res/.\n"; is_error = true;}
 		else
 		{
 			glGenTextures(1, &m_texture);
@@ -270,12 +240,12 @@ int main (int, char**)
 				if (SDL_JoystickNumAxes(joy) > 3)
 				{
 					
-					c.forward = -1 * (int) (100.f * SDL_JoystickGetAxis(joy, 1)/32767.f);
-					c.right = (int) (100.f * SDL_JoystickGetAxis(joy, 0)/32767.f);
-					c.up = -1 * (int) (100.f * SDL_JoystickGetAxis(joy, 3)/32767.f);
-					c.clockwise = (int) (50.f * SDL_JoystickGetAxis(joy, 2)/32767.f);
+					c.forward = -1 * (int) (400.f * SDL_JoystickGetAxis(joy, 1)/32767.f);
+					c.right = (int) (400.f * SDL_JoystickGetAxis(joy, 0)/32767.f);
+					c.up = -1 * (int) (400.f * SDL_JoystickGetAxis(joy, 3)/32767.f);
+					c.clockwise = (int) (200.f * SDL_JoystickGetAxis(joy, 2)/32767.f);
 
-					elevate_magnitude = 100 - (int)(100 * ((32768 + (int)SDL_JoystickGetAxis(joy, 3))/65535.f));
+					elevate_magnitude = 400 - (int)(400 * ((32768 + (int)SDL_JoystickGetAxis(joy, 3))/65535.f));
 				}
 
 				if (SDL_JoystickNumButtons(joy) >= 2)
@@ -429,7 +399,7 @@ int main (int, char**)
 				}
 			}
 
-			//*
+			/*
 			int max = 100;
 			/*/
 			int max = 400;
@@ -594,10 +564,6 @@ int main (int, char**)
 	SDL_GL_DeleteContext(gl_context);
 	SDL_DestroyWindow(window);
 	SDL_Quit();
-
-#if defined (__APPLE__)
-	//free(realp);
-#endif
 
 	return 0;
 }
