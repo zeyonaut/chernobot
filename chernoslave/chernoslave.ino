@@ -27,27 +27,31 @@ void loop()
 		switch (current_byte)
 		{
 			case 255:
-				pin_index = -1;
+				pin_index = 0;
 				are_first_seven_bits_filled = false;
 				continue;
 
 			default: //TODO check first for first bit filled;
-				if (pin_index > 11)
+				if (pin_index >= 12)
 				{
-					pin_index = -1;
+					pin_index = 0;
 					are_first_seven_bits_filled = false;
 					continue;
 				}
 
 				if (!are_first_seven_bits_filled)
 				{
-					++pin_index; current_us += 128 * current_byte;
+					current_us = 128 * current_byte;
           are_first_seven_bits_filled = true;
 				}
 				else
 				{
 					current_us += current_byte;
 					s[pin_index].writeMicroseconds(current_us);
+         
+          current_us = 0;
+          are_first_seven_bits_filled = false;
+          ++pin_index;
 				}
 				continue;
 		}

@@ -3,6 +3,8 @@
 #include <cmath>
 #include <cstdint>
 
+#include <iostream>
+
 // x is positive on the left, y is positive in front
 vec2 fleft_motor = {1, 1};
 vec2 fright_motor = {-1, 1};
@@ -172,11 +174,13 @@ std::string serialize_data (std::array<std::uint16_t, 12> pin_data)
 {
 	std::string serialized_data = "";
 	serialized_data.push_back((std::uint8_t) 255);
+
 	for (auto i : pin_data) 
 	{
 		serialized_data.push_back((std::uint8_t) (i/128));
 		serialized_data.push_back((std::uint8_t) (i%128));
 	}
+	
 	return serialized_data;
 }
 //*/
