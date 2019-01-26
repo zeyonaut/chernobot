@@ -7,3 +7,6 @@
 [submodule "ext/qfs-cpp"]
 	path = ext/qfs-cpp
 	url = https://github.com/hyperum/qfs-cpp
+[submodule "ext/expected"]
+	path = ext/expected
+	url = https://github.com/TartanLlama/expected

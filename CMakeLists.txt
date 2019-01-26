@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.7.2)
 project(Chernobot)
 
-#set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD 17)
 
 # Find cmake modules in ./cmake
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${Chernobot_SOURCE_DIR}/cmake")
@@ -31,10 +31,11 @@ include_directories(${Chernobot_SOURCE_DIR}/ext/glad/include)
 include_directories(${Chernobot_SOURCE_DIR}/ext/imgui)
 include_directories(${Chernobot_SOURCE_DIR}/ext/serial/include)
 include_directories(${Chernobot_SOURCE_DIR}/ext)
+include_directories(${Chernobot_SOURCE_DIR}/ext/expected/tl)
 
 add_executable(Chernobot src/main.cpp)
 
-file(GLOB Chernobot_SRC "src/*.cpp")
+file(GLOB_RECURSE Chernobot_SRC "src/*.cpp")
 target_sources(Chernobot PUBLIC ${Chernobot_SRC})
 file(GLOB Imgui_SRC "ext/imgui/*.cpp")
 target_sources(Chernobot PUBLIC ${Imgui_SRC})

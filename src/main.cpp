@@ -8,7 +8,7 @@
 #include <SDL.h>
 #include <SDL_keycode.h>
 
-#include "imgui_impl_sdl_gl3.h"
+#include "util/imgui_impl_sdl_gl3.h"
 
 #include <vector>
 #include <exception>
@@ -16,50 +16,50 @@
 #include <string> 
 #include <array>
 
-#include <qfs-cpp/qfs.hpp>
+#include <qfs-cpp/qfs.hpp> //qfs doesn't work in linux - use std namespaced strcmp. Also, exe_path doesn't work.
+
 #include "overseer.h"
 
 #include <chrono>
 
 #include <cmath>
 
-int main (int, char**)
+#include "util/fin.h"
+
+#include "util.hpp"
+
+#include "macros.hpp"
+
+int run();
+
+int main (int, char**) try {return run();} catch (...) {throw;} // Force the stack to unwind on an uncaught exception.
+
+int run()
 {
-	if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK) != 0)
+	Fin fin;
+
+	// Set up SDL window and OpenGL
+	windowly window;
+
+	// Set up ImGui
 	{
-		printf("Error: %s\n", SDL_GetError());
-		return -1;
+		ImGui::CreateContext();
+		ImGui_ImplSdlGL3_Init(window.sdl_window());
+
+		ImGui::StyleColorsDark();
+		ImGuiStyle& style = ImGui::GetStyle();
+		style.WindowRounding = 0.f;
+		style.Alpha = 1.f;
+		style.WindowBorderSize= 0.f;
+		style.FrameBorderSize= 0.f;
+
+		fin += []()
+		{
+			ImGui_ImplSdlGL3_Shutdown();
+			ImGui::DestroyContext();
+		};
 	}
 
-	// Setup window
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_FLAGS, SDL_GL_CONTEXT_FORWARD_COMPATIBLE_FLAG);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
-	SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
-	SDL_GL_SetAttribute(SDL_GL_DEPTH_SIZE, 24);
-	SDL_GL_SetAttribute(SDL_GL_STENCIL_SIZE, 8);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, 3);
-	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
-	SDL_DisplayMode current;
-	SDL_GetCurrentDisplayMode(0, &current);
-	SDL_Window* window = SDL_CreateWindow("Chernobot - Pilot Console", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, 720, 800, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE);
-	SDL_GLContext gl_context = SDL_GL_CreateContext(window);
-	SDL_GL_SetSwapInterval(1); // Enable vsync
-
-	gladLoadGL();
-
-	ImGui::CreateContext();
-	ImGuiIO& io = ImGui::GetIO(); (void)io;
-
-	ImGui_ImplSdlGL3_Init(window);
-
-	ImGui::StyleColorsDark();
-	ImGuiStyle& style = ImGui::GetStyle();
-	style.WindowRounding = 0.f;
-	style.Alpha = 1.f;
-	style.WindowBorderSize= 0.f;
-	style.FrameBorderSize= 0.f;
-
-	glClearColor(0, 0, 0, 1);
 
 	serial::Serial port("");
 	port.setBaudrate(115200);
@@ -90,64 +90,121 @@ int main (int, char**)
 
 	bool is_error = false;
 
-	std::string img_path = "../res/lake.png";
-
 	int elevate_direction = 0;
 	int elevate_magnitude = 0;
 	float elevate_amt = 0;
 
 	bool is_using_bool_elev = true;
 
-	int w;
-	int h;
-	if (!is_error)
-	{
-		int comp;
-		unsigned char* image = stbi_load(qfs::get_real_path(qfs::get_directory(qfs::get_executable_path()) + "../res/lake.png").c_str(), &w, &h, &comp, STBI_rgb_alpha);
-
-		if(image == nullptr) {std::cout << "ERR: lake.png is not in $EXECUTABLE_PATH/../res/.\n"; is_error = true;}
-		else
-		{
-			glGenTextures(1, &m_texture);
-			glBindTexture(GL_TEXTURE_2D, m_texture);
-
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
-			glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
-
-			glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_RGBA, GL_UNSIGNED_BYTE, image);
-			glBindTexture(GL_TEXTURE_2D, 0);
-
-			stbi_image_free(image);
-		}
-	}
+	texturely lake_image = texturely::load(qfs::real_path(qfs::dir(qfs::exe_path()) + "../res/lake.png")).value();
+	auto const [w, h] = lake_image.size();
 
 	const float PI = 3.1415926;
 
-			float heading = 184;
-			float ascent_airspeed = 93;
-			float ascent_rate = 10;
-			float time_until_failure = 43;
-			float descent_airspeed = 64;
-			float descent_rate = 6;
-			float direction = 270;
-			float wind_speed = 9.4;
+		float heading = 184;
+		float ascent_airspeed = 93;
+		float ascent_rate = 10;
+		float time_until_failure = 43;
+		float descent_airspeed = 64;
+		float descent_rate = 6;
+		float direction = 270;
+		float wind_speed = 9.4;
 
-			int no_of_turbines = 6;
-			float rotor_diameter = 14;
-			float current_kn = 4.5;
-			float efficiency = 35;
+		int no_of_turbines = 6;
+		float rotor_diameter = 14;
+		float current_kn = 4.5;
+		float efficiency = 35;
 
 
 	auto key_last = std::chrono::high_resolution_clock::now();
 	auto key_now = std::chrono::high_resolution_clock::now();
 
+//STOPWATCH
+
 		bool clock_state = false;
 		bool clock_state_previous = false;
 		auto inital_time = std::chrono::high_resolution_clock::now();
 		auto maintain_time_proper = (std::chrono::high_resolution_clock::now() - std::chrono::high_resolution_clock::now());
-		int maintain_time = maintain_time_proper.count() / 1000000000;
 		std::vector<int> lapped_seconds;
 		bool lap_state_previous = false;
+
+		auto update_imgui_stopwatch = [&]
+		{
+			bool stopwatch_state = ImGui::Button("Stopwatch");
+			ImGui::SameLine();
+			bool lap_state = ImGui::Button("Lap");
+			ImGui::SameLine();
+			if(ImGui::Button("Reset"))
+			{
+				inital_time = std::chrono::high_resolution_clock::now();
+				maintain_time_proper = std::chrono::high_resolution_clock::now() - std::chrono::high_resolution_clock::now();
+				lapped_seconds.clear();
+			}
+			ImGui::SameLine();
+			int current_stopwatch;
+			if(!clock_state)
+			{
+				if(stopwatch_state && !clock_state_previous)
+				{
+					clock_state_previous = true;
+				}
+				else if(!stopwatch_state && clock_state_previous)
+				{
+					inital_time = std::chrono::high_resolution_clock::now() - maintain_time_proper;
+					clock_state = true;
+					clock_state_previous = false;
+				}
+				ImGui::Text("Stopped");
+			}
+			else
+			{
+				current_stopwatch = ((std::chrono::high_resolution_clock::now() - inital_time).count())/1000000000;
+				if(lap_state && !lap_state_previous)
+				{
+					lap_state_previous = true;
+				}
+				else if(!lap_state && lap_state_previous)
+				{
+					lap_state_previous = false;
+					lapped_seconds.push_back(current_stopwatch);
+				}
+
+				if(stopwatch_state && !clock_state_previous)
+				{
+					clock_state_previous = true;
+				}
+				else if(!stopwatch_state && clock_state_previous)
+				{
+					maintain_time_proper = std::chrono::high_resolution_clock::now() - inital_time;
+					clock_state = false;
+					clock_state_previous = false;
+				}
+				ImGui::Text("Running");
+			}
+
+			ImGui::Text("Stopwatch Time: %02d:%02d; Lap: %02d:%02d", ((int)(current_stopwatch)/60),((int)(current_stopwatch)%60), lapped_seconds.size()>0? (current_stopwatch - lapped_seconds[lapped_seconds.size()-1])/60 : current_stopwatch/60, lapped_seconds.size()>0? (current_stopwatch - lapped_seconds[lapped_seconds.size()-1]) % 60 : current_stopwatch % 60);
+
+			// LAP DISPLAY
+
+			ImGui::NewLine();
+
+			for(int i = 1; i <= 5 ; i++)
+			{
+				if(lapped_seconds.size() + 1 > i)
+				{
+					ImGui::Text("Lap Time %02d: %02d:%02d", (int)(lapped_seconds.size() - i + 1),(int)((int)(lapped_seconds[lapped_seconds.size() - i])/60), (int)((int)(lapped_seconds[lapped_seconds.size() - i])%60));
+				}
+			}
+
+			if(lapped_seconds.size() <= 5)
+			{
+				for(int i = 0; i < 5 - lapped_seconds.size(); i++)
+				{
+					ImGui::NewLine();
+				}
+			}
+		};
+
 	
 	while (running)
 	{	
@@ -156,15 +213,15 @@ int main (int, char**)
 			INPUT CALCULATION AND STUFF
 		*/
 
-		int window_w = 640; int window_h = 480;
-		SDL_GetWindowSize(window, &window_w, &window_h);
+		auto const [window_w, window_h] = window.size();
+
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
 		{
 			ImGui_ImplSdlGL3_ProcessEvent(&event);
 			if (event.type == SDL_QUIT) running = false;
 		}
-		ImGui_ImplSdlGL3_NewFrame(window);
+		ImGui_ImplSdlGL3_NewFrame(window.sdl_window());
 
 		key_now = std::chrono::high_resolution_clock::now();
 		double time = std::chrono::duration_cast<std::chrono::duration<double>>(key_now - key_last).count();
@@ -322,82 +379,10 @@ int main (int, char**)
 			// STOPWATCH
 
 			ImGui::NewLine();
-			
-			bool stopwatch_state = ImGui::Button("Stopwatch");
-			ImGui::SameLine();
-			bool lap_state = ImGui::Button("Lap");
-			ImGui::SameLine();
-			if(ImGui::Button("Reset"))
-			{
-				inital_time = std::chrono::high_resolution_clock::now();
-				maintain_time_proper = std::chrono::high_resolution_clock::now() - std::chrono::high_resolution_clock::now();
-				maintain_time = 0;
-				lapped_seconds.clear();
-			}
-			ImGui::SameLine();
-			int current_stopwatch;
-			if(!clock_state)
-			{
-				if(stopwatch_state && !clock_state_previous)
-				{
-					clock_state_previous = true;
-				}
-				else if(!stopwatch_state && clock_state_previous)
-				{
-					inital_time = std::chrono::high_resolution_clock::now() - maintain_time_proper;
-					clock_state = true;
-					clock_state_previous = false;
-				}
-				ImGui::Text("Stopped");
-			}
-			else
-			{
-				current_stopwatch = ((std::chrono::high_resolution_clock::now() - inital_time).count())/1000000000;
-				if(lap_state && !lap_state_previous)
-				{
-					lap_state_previous = true;
-				}
-				else if(!lap_state && lap_state_previous)
-				{
-					lap_state_previous = false;
-					lapped_seconds.push_back(current_stopwatch);
-				}
 
-				if(stopwatch_state && !clock_state_previous)
-				{
-					clock_state_previous = true;
-				}
-				else if(!stopwatch_state && clock_state_previous)
-				{
-					maintain_time = current_stopwatch;
-					maintain_time_proper = std::chrono::high_resolution_clock::now() - inital_time;
-					clock_state = false;
-					clock_state_previous = false;
-				}
-				ImGui::Text("Running");
-			}
+			//prv lapped_seconds, inital_time, maintain_time_proper, clock_state, clock_state_previous, lap_state_previous
 
-			ImGui::Text("Stopwatch Time: %02d:%02d; Lap: %02d:%02d", ((int)(current_stopwatch)/60),((int)(current_stopwatch)%60), lapped_seconds.size()>0? (current_stopwatch - lapped_seconds[lapped_seconds.size()-1])/60 : current_stopwatch/60, lapped_seconds.size()>0? (current_stopwatch - lapped_seconds[lapped_seconds.size()-1]) % 60 : current_stopwatch % 60);
-
-			// LAP DISPLAY
-
-			ImGui::NewLine();
-
-			for(int i = 1; i <= 5 ; i++)
-			{
-				if(lapped_seconds.size() + 1 > i)
-				{
-					ImGui::Text("Lap Time %02d: %02d:%02d", (int)(lapped_seconds.size() - i + 1),(int)((int)(lapped_seconds[lapped_seconds.size() - i])/60), (int)((int)(lapped_seconds[lapped_seconds.size() - i])%60));
-				}
-			}
-
-			if(lapped_seconds.size() <= 5)
-			{
-				for(int i = 0; i < 5 - lapped_seconds.size(); i++)
-				{
-					ImGui::NewLine();
-				}
-			}
+			update_imgui_stopwatch();
 
 			/*
 			int max = 100;
@@ -525,7 +510,7 @@ int main (int, char**)
 				
 				ImVec2 orig = ImGui::GetCursorScreenPos(); //top left
 
-				ImGui::Image((ImTextureID)(uintptr_t)m_texture, ImVec2(content_width, h * content_width/w), ImVec2(0,0), ImVec2(1,1), ImVec4(255,255,255,255), ImVec4(255,255,255,0));
+				ImGui::Image((ImTextureID)(uintptr_t)lake_image.gl_id(), ImVec2(content_width, h * content_width/w), ImVec2(0,0), ImVec2(1,1), ImVec4(255,255,255,255), ImVec4(255,255,255,0));
 
 				ImDrawList* draw_list = ImGui::GetWindowDrawList();
 				draw_list->PushClipRect(orig, ImVec2(orig.x + content_width, orig.y + h * content_width/w), false);
@@ -553,17 +538,9 @@ int main (int, char**)
 		glClear(GL_COLOR_BUFFER_BIT);
 		ImGui::Render();
 		ImGui_ImplSdlGL3_RenderDrawData(ImGui::GetDrawData());
-		SDL_GL_SwapWindow(window);
+
+		window.update();
 	}
-
-	glDeleteTextures(0, &m_texture);
-
-	ImGui_ImplSdlGL3_Shutdown();
-	ImGui::DestroyContext();
-
-	SDL_GL_DeleteContext(gl_context);
-	SDL_DestroyWindow(window);
-	SDL_Quit();
 
 	return 0;
 }
