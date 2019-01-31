@@ -9,6 +9,14 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${Chernobot_SOURCE_DIR}/cmake")
 set(BIN_DIR ${Chernobot_SOURCE_DIR}/bin)
 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wduplicated-cond -Wduplicated-branches -Wlifetime")
+
+if(APPLE)
+	if (EXISTS "/usr/local/bin/clang")
+		set(CMAKE_CXX_COMPILER "/usr/local/bin/clang")
+	endif()
+endif()
+
 # Set warning levels and debug/release specific flags
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU" OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
 	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -std=c++11")
@@ -32,6 +40,7 @@ include_directories(${Chernobot_SOURCE_DIR}/ext/imgui)
 include_directories(${Chernobot_SOURCE_DIR}/ext/serial/include)
 include_directories(${Chernobot_SOURCE_DIR}/ext)
 include_directories(${Chernobot_SOURCE_DIR}/ext/expected/tl)
+include_directories(${Chernobot_SOURCE_DIR}/ext/stb)
 
 add_executable(Chernobot src/main.cpp)
 
