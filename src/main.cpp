@@ -21,14 +21,29 @@
 #include "overseer.h"
 
 #include <chrono>
-
 #include <cmath>
+extern "C"
+{
+#include <libavdevice/avdevice.h>
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavfilter/avfilter.h>
+#include <libavutil/avutil.h>
+#include <libswscale/swscale.h>
+}
+
 
 #include "util/fin.h"
 
 #include "util.hpp"
 
 #include "macros.hpp"
+
+#include "advd/streamref.hpp"
+#include "advd/videostream.hpp"
+
+
+
 
 int run();
 
@@ -37,9 +52,78 @@ int main (int, char**) try {return run();} catch (...) {throw;} // Force the sta
 int run()
 {
 	Fin fin;
+	
+	avdevice_register_all();
 
+	/*AVFormatContext *format_context = avformat_alloc_context();
+	fin += [&]{avformat_free_context(format_context);};*/
+
+//avformat_open_input(&format_context, "Face", fmt, )
+	  /*for (int i = 0; i < device_list->nb_devices; i++) {
+			av_log(avctx, AV_LOG_INFO, "\t'%s'\n", device_list->devices[i]->device_description);
+	}*/
+
+/*
+	avdevice_register_all();
+		//av_log_set_level(AV_LOG_ERROR);
+
+		AVInputFormat*   cameraFormat		= av_find_input_format("avfoundation");
+		AVFormatContext* cameraFormatContext = avformat_alloc_context();
+		AVCodec*		 cameraCodec		 = NULL;
+		AVCodecContext*  cameraCodecContext  = NULL;
+		int			  cameraVideo		 = 0;
+		std::string		   cameraSource	= "FaceTime HD Camera (Built-in)" //"USB 2.0 PC Cam";;
+		AVFrame	*		 rawFrame = NULL, *convertedFrame = NULL;
+		SwsContext*	  imageConversionContext ;
+		unsigned char*		   frameBuffer;
+		int			  frameBytes;
+
+		AVPacket		 cameraPacket;
+		int			  isFrameFinished = 0;*/
+/*
+		if (avformat_open_input(&cameraFormatContext, cameraSource.toStringz, cameraFormat, null) != 0) return;
+		//if (avformat_find_stream_info(inFormatContext) < 0) return;
+		av_dump_format(cameraFormatContext, 0, cameraSource.toStringz, 0);
+
+		for (int i = 0; i < cameraFormatContext.nb_streams; i++)
+		{	   
+				if (cameraFormatContext.streams[i].codec.codec_type == AVMediaType.AVMEDIA_TYPE_VIDEO)
+				{	   
+						cameraVideo = i;
+						break;
+				}
+		}
+
+		if(cameraVideo == -1) return;
+
+		cameraCodec = avcodec_find_decoder(cameraFormatContext.streams[cameraVideo].codec.codec_id);
+		cameraCodecContext = cameraFormatContext.streams[cameraVideo].codec;
+
+		//warn: camera source size is added manually. find a way to fix it.
+		cameraCodecContext.width = 640;
+
+		cameraCodecContext.height = 480;
+		cameraCodecContext.pix_fmt = AVPixelFormat.AV_PIX_FMT_UYVY422;
+
+		//warn: find a way to input uyvy422 as pixel format for camera.
+		if(cameraCodec == null) return;
+		if(cameraCodecContext == null) return;
+		if(avcodec_open2(cameraCodecContext, cameraCodec, null) < 0) return;
+
+		cameraCodecContext.pix_fmt = AVPixelFormat.AV_PIX_FMT_UYVY422;
+
+		rawFrame = av_frame_alloc(); convertedFrame = av_frame_alloc();
+
+		frameBytes = avpicture_get_size(AVPixelFormat.AV_PIX_FMT_UYVY422, cameraCodecContext.width, cameraCodecContext.height);
+		frameBuffer = cast(ubyte*) av_malloc(frameBytes * ubyte.sizeof);
+		avpicture_fill(cast(AVPicture*) convertedFrame, frameBuffer, AVPixelFormat.AV_PIX_FMT_UYVY422, cameraCodecContext.width, cameraCodecContext.height);
+
+		// writefln("%i%i", cameraCodecContext.pix_fmt, AVPixelFormat.AV_PIX_FMT_RGB24);
+		imageConversionContext = sws_getCachedContext(null, cameraCodecContext.width, cameraCodecContext.height, cameraCodecContext.pix_fmt, cameraCodecContext.width, cameraCodecContext.height, AVPixelFormat.AV_PIX_FMT_BGR24, SWS_BICUBIC, null, null, null);
+		if (imageConversionContext == null) return;
+*/
 	// Set up SDL window and OpenGL
-	windowly window;
+	window_t window;
 
 	// Set up ImGui
 	{
@@ -59,7 +143,6 @@ int run()
 			ImGui::DestroyContext();
 		};
 	}
-
 
 	serial::Serial port("");
 	port.setBaudrate(115200);
@@ -96,115 +179,115 @@ int run()
 
 	bool is_using_bool_elev = true;
 
-	texturely lake_image = texturely::load(qfs::real_path(qfs::dir(qfs::exe_path()) + "../res/lake.png")).value();
+	texture_t lake_image = texture_t::from_path(qfs::real_path(qfs::dir(qfs::exe_path()) + "../res/lake.png")).value();
 	auto const [w, h] = lake_image.size();
 
 	const float PI = 3.1415926;
 
-		float heading = 184;
-		float ascent_airspeed = 93;
-		float ascent_rate = 10;
-		float time_until_failure = 43;
-		float descent_airspeed = 64;
-		float descent_rate = 6;
-		float direction = 270;
-		float wind_speed = 9.4;
+	float heading = 184;
+	float ascent_airspeed = 93;
+	float ascent_rate = 10;
+	float time_until_failure = 43;
+	float descent_airspeed = 64;
+	float descent_rate = 6;
+	float direction = 270;
+	float wind_speed = 9.4;
 
-		int no_of_turbines = 6;
-		float rotor_diameter = 14;
-		float current_kn = 4.5;
-		float efficiency = 35;
-
+	int no_of_turbines = 6;
+	float rotor_diameter = 14;
+	float current_kn = 4.5;
+	float efficiency = 35;
 
 	auto key_last = std::chrono::high_resolution_clock::now();
 	auto key_now = std::chrono::high_resolution_clock::now();
 
 //STOPWATCH
 
-		bool clock_state = false;
-		bool clock_state_previous = false;
-		auto inital_time = std::chrono::high_resolution_clock::now();
-		auto maintain_time_proper = (std::chrono::high_resolution_clock::now() - std::chrono::high_resolution_clock::now());
-		std::vector<int> lapped_seconds;
-		bool lap_state_previous = false;
+	bool clock_state = false;
+	bool clock_state_previous = false;
+	auto inital_time = std::chrono::high_resolution_clock::now();
+	auto maintain_time_proper = (std::chrono::high_resolution_clock::now() - std::chrono::high_resolution_clock::now());
+	std::vector<int> lapped_seconds;
+	bool lap_state_previous = false;
 
-		auto update_imgui_stopwatch = [&]
+	auto update_imgui_stopwatch = [&]
+	{
+		bool stopwatch_state = ImGui::Button("Stopwatch");
+		ImGui::SameLine();
+		bool lap_state = ImGui::Button("Lap");
+		ImGui::SameLine();
+		if(ImGui::Button("Reset"))
 		{
-			bool stopwatch_state = ImGui::Button("Stopwatch");
-			ImGui::SameLine();
-			bool lap_state = ImGui::Button("Lap");
-			ImGui::SameLine();
-			if(ImGui::Button("Reset"))
+			inital_time = std::chrono::high_resolution_clock::now();
+			maintain_time_proper = std::chrono::high_resolution_clock::now() - std::chrono::high_resolution_clock::now();
+			lapped_seconds.clear();
+		}
+		ImGui::SameLine();
+		int current_stopwatch;
+		if(!clock_state)
+		{
+			if(stopwatch_state && !clock_state_previous)
 			{
-				inital_time = std::chrono::high_resolution_clock::now();
-				maintain_time_proper = std::chrono::high_resolution_clock::now() - std::chrono::high_resolution_clock::now();
-				lapped_seconds.clear();
+				clock_state_previous = true;
 			}
-			ImGui::SameLine();
-			int current_stopwatch;
-			if(!clock_state)
+			else if(!stopwatch_state && clock_state_previous)
 			{
-				if(stopwatch_state && !clock_state_previous)
-				{
-					clock_state_previous = true;
-				}
-				else if(!stopwatch_state && clock_state_previous)
-				{
-					inital_time = std::chrono::high_resolution_clock::now() - maintain_time_proper;
-					clock_state = true;
-					clock_state_previous = false;
-				}
-				ImGui::Text("Stopped");
+				inital_time = std::chrono::high_resolution_clock::now() - maintain_time_proper;
+				clock_state = true;
+				clock_state_previous = false;
 			}
-			else
+			ImGui::Text("Stopped");
+		}
+		else
+		{
+			current_stopwatch = ((std::chrono::high_resolution_clock::now() - inital_time).count())/1000000000;
+			if(lap_state && !lap_state_previous)
 			{
-				current_stopwatch = ((std::chrono::high_resolution_clock::now() - inital_time).count())/1000000000;
-				if(lap_state && !lap_state_previous)
-				{
-					lap_state_previous = true;
-				}
-				else if(!lap_state && lap_state_previous)
-				{
-					lap_state_previous = false;
-					lapped_seconds.push_back(current_stopwatch);
-				}
-
-				if(stopwatch_state && !clock_state_previous)
-				{
-					clock_state_previous = true;
-				}
-				else if(!stopwatch_state && clock_state_previous)
-				{
-					maintain_time_proper = std::chrono::high_resolution_clock::now() - inital_time;
-					clock_state = false;
-					clock_state_previous = false;
-				}
-				ImGui::Text("Running");
+				lap_state_previous = true;
+			}
+			else if(!lap_state && lap_state_previous)
+			{
+				lap_state_previous = false;
+				lapped_seconds.push_back(current_stopwatch);
 			}
 
-			ImGui::Text("Stopwatch Time: %02d:%02d; Lap: %02d:%02d", ((int)(current_stopwatch)/60),((int)(current_stopwatch)%60), lapped_seconds.size()>0? (current_stopwatch - lapped_seconds[lapped_seconds.size()-1])/60 : current_stopwatch/60, lapped_seconds.size()>0? (current_stopwatch - lapped_seconds[lapped_seconds.size()-1]) % 60 : current_stopwatch % 60);
-
-			// LAP DISPLAY
-
-			ImGui::NewLine();
-
-			for(int i = 1; i <= 5 ; i++)
+			if(stopwatch_state && !clock_state_previous)
 			{
-				if(lapped_seconds.size() + 1 > i)
-				{
-					ImGui::Text("Lap Time %02d: %02d:%02d", (int)(lapped_seconds.size() - i + 1),(int)((int)(lapped_seconds[lapped_seconds.size() - i])/60), (int)((int)(lapped_seconds[lapped_seconds.size() - i])%60));
-				}
+				clock_state_previous = true;
 			}
-
-			if(lapped_seconds.size() <= 5)
+			else if(!stopwatch_state && clock_state_previous)
 			{
-				for(int i = 0; i < 5 - lapped_seconds.size(); i++)
-				{
-					ImGui::NewLine();
-				}
+				maintain_time_proper = std::chrono::high_resolution_clock::now() - inital_time;
+				clock_state = false;
+				clock_state_previous = false;
 			}
-		};
+			ImGui::Text("Running");
+		}
 
+		ImGui::Text("Stopwatch Time: %02d:%02d; Lap: %02d:%02d", ((int)(current_stopwatch)/60),((int)(current_stopwatch)%60), lapped_seconds.size()>0? (current_stopwatch - lapped_seconds[lapped_seconds.size()-1])/60 : current_stopwatch/60, lapped_seconds.size()>0? (current_stopwatch - lapped_seconds[lapped_seconds.size()-1]) % 60 : current_stopwatch % 60);
+
+		// LAP DISPLAY
+
+		ImGui::NewLine();
+
+		for(int i = 1; i <= 5 ; i++)
+		{
+			if(lapped_seconds.size() + 1 > i)
+			{
+				ImGui::Text("Lap Time %02d: %02d:%02d", (int)(lapped_seconds.size() - i + 1),(int)((int)(lapped_seconds[lapped_seconds.size() - i])/60), (int)((int)(lapped_seconds[lapped_seconds.size() - i])%60));
+			}
+		}
+
+		if(lapped_seconds.size() <= 5)
+		{
+			for(int i = 0; i < 5 - lapped_seconds.size(); i++)
+			{
+				ImGui::NewLine();
+			}
+		}
+	};
+
+	advd::Videostream vid {};
 	
 	while (running)
 	{	
@@ -357,6 +440,134 @@ int run()
 		ImGui::Begin("Pilot Console", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 		//if (mode == 0) //pilot
 		{
+			{
+				ImGui::Image((ImTextureID)(uintptr_t)lake_image.gl_id(), ImVec2(100, 50), ImVec2(0,0), ImVec2(1,1), ImVec4(255,255,255,255), ImVec4(255,255,255,0));
+				
+				static std::vector<advd::StreamRef> videostream_refs;
+				static std::string videostream_ref_id = "";
+				static int videostream_ref_index = -1;
+				static auto last_id = videostream_ref_id;
+				static auto last_index = videostream_ref_index;
+
+				if (ImGui::Button("Configure Videostream..")) 
+				{
+					ImGui::OpenPopup("Videostream Options");
+
+					videostream_refs = advd::StreamRef::enumerate();
+					videostream_ref_index = -1;
+					for (int i = 0; i < videostream_refs.size(); ++i)
+					{
+						if (videostream_refs[i].id() == videostream_ref_id) videostream_ref_index = i; 
+					}
+				}
+
+				if (ImGui::BeginPopupModal("Videostream Options", NULL, ImGuiWindowFlags_AlwaysAutoResize))
+				{
+					ImGui::ListBoxHeader("Videostream", videostream_refs.size() + 1);
+						if (ImGui::Selectable("<none>", videostream_ref_index == -1)) {videostream_ref_index = -1; videostream_ref_id = "";};
+						for (int i = 0; i < videostream_refs.size(); ++i) if (ImGui::Selectable(videostream_refs[i].label().c_str(), videostream_ref_index == i)) {videostream_ref_index = i; videostream_ref_id = videostream_refs[i].id();};
+					ImGui::ListBoxFooter();
+
+					if (ImGui::Button("Finish"))
+					{
+						ImGui::CloseCurrentPopup();
+
+						if (last_id != videostream_ref_id)
+						{
+							/*AVInputFormat *format = av_find_input_format("avfoundation"); // macOS only
+							AVFormatContext *format_ctx = avformat_alloc_context();
+
+							if (avformat_open_input(&format_ctx, videostream_ref_id.c_str(), format, NULL) != 0) return false;
+							if (avformat_find_stream_info(format_ctx, NULL) < 0) return false;
+							av_dump_format(format_ctx, 0, videostream_ref_id.c_str(), 0);
+
+							avformat_free_context(format_ctx);*/
+
+							if (videostream_ref_index != -1)
+							{
+								vid.open(videostream_refs[videostream_ref_index]);
+								lake_image = vid.current_frame();
+							}
+							else
+							{
+								vid.close();
+							}
+
+							/*		
+							AVInputFormat*   cameraFormat		= av_find_input_format("avfoundation");
+							AVFormatContext* cameraFormatContext = avformat_alloc_context();
+							AVCodec*		 cameraCodec		 = NULL;
+							AVCodecContext*  cameraCodecContext  = NULL;
+							int			  cameraVideo		 = 0;
+							std::string		   cameraSource	= "FaceTime HD Camera (Built-in)" //"USB 2.0 PC Cam";;
+							AVFrame	*		 rawFrame = NULL, *convertedFrame = NULL;
+							SwsContext*	  imageConversionContext ;
+							unsigned char*		   frameBuffer;
+							int			  frameBytes;
+
+							AVPacket		 cameraPacket;
+							int			  isFrameFinished = 0;
+
+							if (avformat_open_input(&cameraFormatContext, cameraSource.toStringz, cameraFormat, null) != 0) return;
+							//if (avformat_find_stream_info(inFormatContext) < 0) return;
+							av_dump_format(cameraFormatContext, 0, cameraSource.toStringz, 0);
+
+							for (int i = 0; i < cameraFormatContext.nb_streams; i++)
+							{	   
+									if (cameraFormatContext.streams[i].codec.codec_type == AVMediaType.AVMEDIA_TYPE_VIDEO)
+									{	   
+											cameraVideo = i;
+											break;
+									}
+							}
+
+							if(cameraVideo == -1) return;
+
+							cameraCodec = avcodec_find_decoder(cameraFormatContext.streams[cameraVideo].codec.codec_id);
+							cameraCodecContext = cameraFormatContext.streams[cameraVideo].codec;
+
+							//warn: camera source size is added manually. find a way to fix it.
+							cameraCodecContext.width = 640;
+
+							cameraCodecContext.height = 480;
+							cameraCodecContext.pix_fmt = AVPixelFormat.AV_PIX_FMT_UYVY422;
+
+							//warn: find a way to input uyvy422 as pixel format for camera.
+							if(cameraCodec == null) return;
+							if(cameraCodecContext == null) return;
+							if(avcodec_open2(cameraCodecContext, cameraCodec, null) < 0) return;
+
+							cameraCodecContext.pix_fmt = AVPixelFormat.AV_PIX_FMT_UYVY422;
+
+							rawFrame = av_frame_alloc(); convertedFrame = av_frame_alloc();
+
+							frameBytes = avpicture_get_size(AVPixelFormat.AV_PIX_FMT_UYVY422, cameraCodecContext.width, cameraCodecContext.height);
+							frameBuffer = cast(ubyte*) av_malloc(frameBytes * ubyte.sizeof);
+							avpicture_fill(cast(AVPicture*) convertedFrame, frameBuffer, AVPixelFormat.AV_PIX_FMT_UYVY422, cameraCodecContext.width, cameraCodecContext.height);
+
+							// writefln("%i%i", cameraCodecContext.pix_fmt, AVPixelFormat.AV_PIX_FMT_RGB24);
+							imageConversionContext = sws_getCachedContext(null, cameraCodecContext.width, cameraCodecContext.height, cameraCodecContext.pix_fmt, cameraCodecContext.width, cameraCodecContext.height, AVPixelFormat.AV_PIX_FMT_BGR24, SWS_BICUBIC, null, null, null);
+							if (imageConversionContext == null) return;
+							*/
+
+							last_id = videostream_ref_id;
+							last_index = videostream_ref_index; //TODO - last_index likely unnecessary
+						}
+					}
+					ImGui::SameLine();
+					if (ImGui::Button("Cancel"))
+					{
+						ImGui::CloseCurrentPopup();
+
+						videostream_ref_id = last_id;
+						videostream_ref_index = last_index;
+					}
+
+					ImGui::EndPopup();
+				}
+			}
+
+
 			//TODO? i thought we needed to track the names but it looks like that won't be necessary - some testing appears that it somehow preserves integrity.
 			if (port_index >= portinfo.size()) port_index = -1;
 			ImGui::ListBoxHeader("Slave", portinfo.size() + 1);
@@ -469,7 +680,7 @@ int run()
 		}
 		ImGui::End();
 		//else if (mode == 1) //Crash Calculator
-		ImGui::SetNextWindowSize(ImVec2(window_w/2, window_h), ImGuiSetCond_Always);
+		/*ImGui::SetNextWindowSize(ImVec2(window_w/2, window_h), ImGuiSetCond_Always);
 		ImGui::SetNextWindowPos(ImVec2(window_w/2, 0.f), ImGuiSetCond_Always);
 		ImGui::Begin("Calculator", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 		{
@@ -487,7 +698,7 @@ int run()
 
 			float wind_north = wind_r * cos((int)(direction - 180) % 360 * PI/ 180);
 			float wind_east = wind_r * sin((int)(direction - 180) % 360 * PI/ 180);
-			float power_generated = no_of_turbines * 0.5 * (1025 * (pow(rotor_diameter / 2, 2) * PI) * pow((current_kn * 0.5144444444444), 3) * efficiency / (100 /*percent to ratio*/ * 1000000 /*watts to megawatts*/));
+			float power_generated = no_of_turbines * 0.5 * (1025 * (pow(rotor_diameter / 2, 2) * PI) * pow((current_kn * 0.5144444444444), 3) * efficiency / (100  * 1000000 )); //percent to ratio  | watts to megawatts
 			
 			ImGui::Text("II.1. Ascent Vector: [%d] m, heading [%d]", (int)(airvec_r + 0.5), (int)(heading));
 			ImGui::Text("II.2. Descent Vector: [%d] m, heading [%d]", (int)(desvec_r + 0.5), (int)(heading));
@@ -503,7 +714,7 @@ int run()
 
 				int content_width = ImGui::GetWindowWidth() - ImGui::GetStyle().ScrollbarSize - 20;
 				
-				float scalefactor = content_width /(1000.f * 15.f); /*Given a distance in meters, times one km/1000 m, times one width/15 km then multiply by contentregion/width to get the distance in content regions*/
+				float scalefactor = content_width /(1000.f * 15.f); //Given a distance in meters, times one km/1000 m, times one width/15 km then multiply by contentregion/width to get the distance in content regions
 
 				if (ImGui::RadioButton("NAS Sand Point", is_takeoff_sand_point)) is_takeoff_sand_point = true; ImGui::SameLine();
 				if (ImGui::RadioButton("Renton Airfield", !is_takeoff_sand_point)) is_takeoff_sand_point = false;
@@ -533,7 +744,7 @@ int run()
 			}
 		}
 		ImGui::End();
-
+		*/
 		glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
 		glClear(GL_COLOR_BUFFER_BIT);
 		ImGui::Render();

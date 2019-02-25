@@ -1,7 +1,7 @@
 #include "overseer.h"
 #include <cmath>
 #include <cstdint>
-
+#include <algorithm> //clamp;
 #include <iostream>
 
 // x is positive on the left, y is positive in front
@@ -51,11 +51,6 @@ int curve (float input)
 	{
 		return -(int)(round(pow((int)(input/(max_value/pow((double)(max_value),1/(curve_magnitude)))), curve_magnitude)));
 	}
-}
-
-void absolutely_clamp(int& i, int magnitude)
-{
-	i = i > magnitude? magnitude : i < -magnitude? -magnitude : i;
 }
 
 /*
@@ -111,6 +106,8 @@ void serialize_controls(std::array<std::uint8_t, 12>& pin_data, const Controls& 
 /*/
 void serialize_controls(std::array<std::uint16_t, 12>& pin_data, const Controls& c, int botflag)
 {
+	using std::clamp;
+
 	pin_data.fill(1500);
 	if (botflag == 0) //Saw
 	{
@@ -121,12 +118,12 @@ void serialize_controls(std::array<std::uint16_t, 12>& pin_data, const Controls&
 		int lvert = c.up;
 		int rvert = c.up;
 
-		absolutely_clamp(fleft, 400);
-		absolutely_clamp(fright, 400);
-		absolutely_clamp(bleft, 400);
-		absolutely_clamp(bright, 400);
-		absolutely_clamp(lvert, 400);
-		absolutely_clamp(rvert, 400);
+		fleft = clamp(-400, fleft, 400);
+		fright = clamp(-400, fright, 400);
+		bleft = clamp(-400, bleft, 400);
+		bright = clamp(-400, bright, 400);
+		lvert = clamp(-400, lvert, 400);
+		rvert = clamp(-400, rvert, 400);
 
 		pin_data[0] = 1500 - bleft;//6 1 //not reversed because backwards config and counterclockwise config cancels each other out //reversed due to wiring minutia
 		pin_data[1] = 1500 + rvert;
@@ -145,9 +142,9 @@ void serialize_controls(std::array<std::uint16_t, 12>& pin_data, const Controls&
 		int lmotor = (c.forward + c.clockwise);
 		int umotor = (c.up);
 
-		absolutely_clamp(rmotor, 400);
-		absolutely_clamp(lmotor, 400);
-		absolutely_clamp(umotor, 400);
+		rmotor = clamp(-400, rmotor, 400);
+		lmotor = clamp(-400, lmotor, 400);
+		umotor = clamp(-400, umotor, 400);
 
 		pin_data[0] = 1500 + rmotor;//6 1 //right motor
 		pin_data[1] = 1500 + lmotor;//7 2 //left motor
@@ -182,4 +179,3 @@ std::string serialize_data (std::array<std::uint16_t, 12> pin_data)
 	
 	return serialized_data;
 }
-//*/

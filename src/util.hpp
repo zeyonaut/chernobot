@@ -4,7 +4,7 @@
 #include <string_view>
 #include "expected.hpp"
 
-class windowly // Did you ever hear of the tragedy of Darth Plagueis the Wise?
+class window_t // Did you ever hear of the tragedy of Darth Plagueis the Wise?
 {
 	SDL_Window *m_sdl_window;
 	SDL_GLContext m_gl_context;
@@ -13,7 +13,7 @@ class windowly // Did you ever hear of the tragedy of Darth Plagueis the Wise?
 
 public:
 
-	windowly ()
+	window_t ()
 	{
 		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK) != 0) // TODO expose a single-use initializer
 		{
@@ -38,7 +38,7 @@ public:
 		glClearColor(0, 0, 0, 1);
 	}
 
-	~windowly ()
+	~window_t ()
 	{
 		SDL_GL_DeleteContext(m_gl_context);
 		SDL_DestroyWindow(m_sdl_window);
@@ -60,101 +60,28 @@ public:
 		return {w, h};
 	}
 };
-/*
-template <typename valid> class resultant
-{
-	union
-	{
-		valid m_value;
-		std::exception_ptr m_error;
-	};
 
-	bool m_is_valid;
-	bool m_is_owned;
-
-public:
-	resultant (valid const &value): m_value(value), m_is_valid(true), m_is_owned(false) {}
-	resultant (valid &&value): m_value(std::move(value)), m_is_valid(true), m_is_owned(true) {value.m_is_owned = false;}
-
-	resultant (resultant<valid> const &result): m_is_valid(result.m_is_valid), m_is_owned(false)
-	{
-		if (m_is_valid) m_value = result.m_value;
-		else m_error = result.m_error;
-	}
-	resultant (resultant<valid> &&result): m_is_valid(true), m_is_owned(true)
-	{
-		if (m_is_valid) m_value = std::move(result.m_value);
-		else m_error = std::move(result.m_error);
-		result.m_is_owned = false;
-	}
-
-	resultant<valid> &operator= (resultant<valid> const &result)
-	{
-		resultant<valid> duplicate {result};
-
-		return duplicate;
-	}
-	resultant<valid> &operator= (resultant<valid> &&result)
-	{
-		resultant<valid> owner {result};
-
-		return owner;
-	}
-
-	static resultant<valid> err (std::exception_ptr &&error)
-	{
-		resultant<valid> result;
-		result.m_is_valid = false;
-		result.m_is_owned = true;
-		new (&result.m_error) std::exception_ptr(std::move(error));
-
-		return result;
-	}
-
-	static resultant<valid> err ()
-	{
-		return err(std::current_exception());
-	}
-
-	static resultant<valid> err (std::string_view error)
-	{
-		err()
-	}
-
-	~resultant ()
-	{
-		if (!m_is_owned)
-		{
-			using std::exception_ptr; 
-			if (m_is_valid) m_value.~valid();
-			else m_error.~exception_ptr();
-		}
-	}
-
-	operator bool () {return m_is_valid;}
-	
-	valid &operator* () {return m_value;}
-};
-*/
-class texturely
+class texture_t
 {
 	GLuint m_gl_id;
 	int m_w;
 	int m_h;
 
-	bool m_is_owned;
+	enum {owned, unowned, none} m_state;
 	
-	texturely (GLuint gl_id, int w, int h, bool is_owned): m_gl_id(gl_id), m_w(w), m_h(h), m_is_owned(is_owned) {}
+	texture_t (GLuint gl_id, int w, int h, bool is_owned): m_gl_id(gl_id), m_w(w), m_h(h), m_state(is_owned? owned : unowned) {}
 
 public:
 
-	texturely (texturely const &texture): m_gl_id(texture.m_gl_id), m_w(texture.m_w), m_h(texture.m_h), m_is_owned(false) {}
-	texturely (texturely &&texture): m_gl_id(texture.m_gl_id), m_w(texture.m_w), m_h(texture.m_h), m_is_owned(true) {texture.m_is_owned = false;}
+	texture_t (): m_gl_id(0), m_w(0), m_h(0), m_state(none) {}
 
-	texturely &operator= (texturely const &texture) {if (m_is_owned) glDeleteTextures(1, &m_gl_id);m_gl_id = texture.m_gl_id; m_w = texture.m_w; m_h = texture.m_h; m_is_owned = false; return *this;}
-	texturely &operator= (texturely &&texture) {if (m_is_owned) glDeleteTextures(1, &m_gl_id); texture.m_is_owned = false; m_gl_id = texture.m_gl_id; m_w = texture.m_w; m_h = texture.m_h; m_is_owned = true; return *this;}
+	texture_t (texture_t const &texture): m_gl_id(texture.m_gl_id), m_w(texture.m_w), m_h(texture.m_h), m_state(unowned) {}
+	texture_t (texture_t &&texture): m_gl_id(texture.m_gl_id), m_w(texture.m_w), m_h(texture.m_h), m_state(owned) {texture.m_state = unowned;}
 
-	static tl::expected<texturely, std::string> load (std::string const &path)
+	texture_t &operator= (texture_t const &texture) {if (m_state == owned) glDeleteTextures(1, &m_gl_id);m_gl_id = texture.m_gl_id; m_w = texture.m_w; m_h = texture.m_h; m_state = unowned; return *this;}
+	texture_t &operator= (texture_t &&texture) {if (m_state == owned) glDeleteTextures(1, &m_gl_id); texture.m_state = unowned; m_gl_id = texture.m_gl_id; m_w = texture.m_w; m_h = texture.m_h; m_state = owned; return *this;}
+
+	static tl::expected<texture_t, std::string> from_path (std::string const &path)
 	{
 		int comp, w, h; // TODO use comp
 		unsigned char* image = stbi_load(path.c_str(), &w, &h, &comp, STBI_rgb_alpha);
@@ -173,21 +100,58 @@ public:
 
 		stbi_image_free(image);
 
-		return {texturely{gl_id, w, h, true}};
+		return {texture_t{gl_id, w, h, owned}};
+	}
+	
+	static texture_t from_data (unsigned char const *const data, std::tuple<int, int> const size, int const channels)
+	{
+		GLuint gl_id;
+		GLint last_id;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_id);
+
+		glBindTexture(GL_TEXTURE_2D, gl_id);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		auto const [w, h] = size;
+		glTexImage2D(GL_TEXTURE_2D, 0, channels == 3? GL_RGB : GL_RGBA , w, h, 0, channels == 1? GL_RED : channels == 2? GL_RG : channels == 3? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, (void*) data);
+		
+		glBindTexture(GL_TEXTURE_2D, last_id);
+		
+		return {texture_t{gl_id, w, h, owned}};
 	}
 
-	~texturely ()
+	~texture_t ()
 	{
-		if (m_is_owned) glDeleteTextures(1, &m_gl_id);
+		if (m_state == owned) glDeleteTextures(1, &m_gl_id);
 	}
 
 	GLuint gl_id ()
 	{
+		assert(m_state != none);
 		return m_gl_id;
+	}
+
+	void reload (unsigned char const *const data, std::tuple<int, int> const size, int const channels)
+	{
+		if (m_state == owned) glDeleteTextures(1, &m_gl_id);
+
+		GLint last_id;
+		glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_id);
+
+		glBindTexture(GL_TEXTURE_2D, m_gl_id);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
+		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
+		auto const [w, h] = size;
+		glTexImage2D(GL_TEXTURE_2D, 0, channels == 3? GL_RGB : GL_RGBA , w, h, 0, channels == 1? GL_RED : channels == 2? GL_RG : channels == 3? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, (void*) data);
+		
+		glBindTexture(GL_TEXTURE_2D, last_id);
+		
+		m_state = owned;
 	}
 
 	std::tuple<int, int> size ()
 	{
+		assert(m_state != none);
 		return {m_w, m_h};
 	}
 };
