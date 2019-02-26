@@ -1,3 +1,4 @@
 bin/
 tmp/
 build
+CMakeCache.txt
