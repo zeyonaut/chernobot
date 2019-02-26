@@ -30,7 +30,7 @@ public:
 		SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, 2);
 		SDL_DisplayMode current;
 		SDL_GetCurrentDisplayMode(0, &current);
-		m_sdl_window = SDL_CreateWindow("Chernobot - Master", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, current.w, current.h, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE|SDL_WINDOW_ALLOW_HIGHDPI);
+		m_sdl_window = SDL_CreateWindow("Chernobot - Master", SDL_WINDOWPOS_CENTERED, SDL_WINDOWPOS_CENTERED, /*current.w, current.h,*/ 720.f, 720.f, SDL_WINDOW_OPENGL|SDL_WINDOW_RESIZABLE|SDL_WINDOW_ALLOW_HIGHDPI);
 		m_gl_context = SDL_GL_CreateContext(m_sdl_window);
 		SDL_GL_SetSwapInterval(1);
 
@@ -106,6 +106,7 @@ public:
 	static texture_t from_data (unsigned char const *const data, std::tuple<int, int> const size, int const channels)
 	{
 		GLuint gl_id;
+		glGenTextures(1, &gl_id);
 		GLint last_id;
 		glGetIntegerv(GL_TEXTURE_BINDING_2D, &last_id);
 
@@ -113,10 +114,10 @@ public:
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
 		auto const [w, h] = size;
+
 		glTexImage2D(GL_TEXTURE_2D, 0, channels == 3? GL_RGB : GL_RGBA , w, h, 0, channels == 1? GL_RED : channels == 2? GL_RG : channels == 3? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, (void*) data);
 		
 		glBindTexture(GL_TEXTURE_2D, last_id);
-		
 		return {texture_t{gl_id, w, h, owned}};
 	}
 

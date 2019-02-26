@@ -51,16 +51,25 @@ namespace advd
 
 			codec_ctx = avcodec_alloc_context3(NULL); //TODO free or something
 			assert(avcodec_parameters_to_context(codec_ctx, format_ctx->streams[stream_index]->codecpar) >= 0);
+			
+			AVCodec *codec = avcodec_find_decoder(codec_ctx->codec_id);
+			//std::cout << (codec_ctx->codec_id == AV_CODEC_ID_RAWVIDEO) << '\n';
+			assert(avcodec_open2(codec_ctx, codec, NULL) >= 0);
 
 			raw_frame = av_frame_alloc();
 			converted_frame = av_frame_alloc();
+			
 
 			frame_bytes = avpicture_get_size(AV_PIX_FMT_RGB24, codec_ctx->width, codec_ctx->height);
 			frame_buffer = (unsigned char *) malloc(frame_bytes * sizeof(unsigned char));
 
 			avpicture_fill((AVPicture *) converted_frame, frame_buffer, AV_PIX_FMT_RGB24, codec_ctx->width, codec_ctx->height);
 			
-			conv_ctx = sws_getCachedContext(NULL, codec_ctx->width, codec_ctx->height, codec_ctx->pix_fmt, codec_ctx->width, codec_ctx->height, AV_PIX_FMT_RGB24, SWS_BICUBIC, NULL, NULL, NULL);
+			conv_ctx = sws_getContext(codec_ctx->width,
+                codec_ctx->height, codec_ctx->pix_fmt, codec_ctx->width,
+                codec_ctx->height, AV_PIX_FMT_RGB24, SWS_BICUBIC, NULL,
+                NULL, NULL);
+//sws_getCachedContext(NULL, codec_ctx->width, codec_ctx->height, codec_ctx->pix_fmt, codec_ctx->width, codec_ctx->height, AV_PIX_FMT_RGB24, SWS_BICUBIC, NULL, NULL, NULL);
 			assert(conv_ctx != NULL);
 
 			#if 0
@@ -109,30 +118,30 @@ namespace advd
 
 		texture_t current_frame ()
 		{
-
-			std::cout <<"test1\n";
-			AVPacket *current_packet = av_packet_alloc();
+			AVPacket current_packet;
+			av_init_packet(&current_packet);
 
 			int is_frame_finished = 0;
-			if (av_read_frame(format_ctx, current_packet) == 0)
+			if (av_read_frame(format_ctx, &current_packet) == 0)
 			{
-			std::cout <<"test2\n";
-				if (current_packet->stream_index == stream_index)
+				if (current_packet.stream_index == stream_index)
 				{
-			std::cout <<"testE\n";
-					avcodec_decode_video2(codec_ctx, raw_frame, &is_frame_finished, current_packet);
+					assert(codec_ctx != NULL);
+					assert(raw_frame != NULL);
+					avcodec_decode_video2(codec_ctx, raw_frame, &is_frame_finished, &current_packet);
 
-			std::cout <<"test4\n";
 					if(is_frame_finished)
 					{
 						sws_scale(conv_ctx, raw_frame->data, raw_frame->linesize, 0, codec_ctx->height, converted_frame->data, converted_frame->linesize);
-						av_packet_unref(current_packet);
-						return texture_t::from_data((unsigned char *) converted_frame->data, {codec_ctx->width, codec_ctx->height}, 3);
+						auto t = texture_t::from_data((unsigned char *) converted_frame->data[0], {codec_ctx->width, codec_ctx->height}, 3);
+				
+						av_packet_unref(&current_packet);
+						return t;
 					}
 				}
 			}
 			
-			av_packet_unref(current_packet);
+			av_packet_unref(&current_packet);
 			close();
 			assert(false); // return none/unexpected.
 		}

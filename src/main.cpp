@@ -288,9 +288,17 @@ int run()
 	};
 
 	advd::Videostream vid {};
+
+	std::cout << "DBG: ID = " << lake_image.gl_id() << '\n';
 	
 	while (running)
 	{	
+
+		if (vid.is_open())
+		{
+			lake_image =
+			vid.current_frame();
+		}
 
 		/*
 			INPUT CALCULATION AND STUFF
@@ -435,14 +443,23 @@ int run()
 		ImGui::SetNextWindowPos(ImVec2(0.f, ImGui::GetFrameHeight()), ImGuiSetCond_Always);
 		ImGui::Begin("Pilot Console", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 		*/
+		ImGui::SetNextWindowSize(ImVec2(window_w, window_h), ImGuiSetCond_Always);
+		ImGui::SetNextWindowPos(ImVec2(0.f, 0.f), ImGuiSetCond_Always);
+		ImGui::Begin("Oculus", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+		{
+			ImGui::Image((ImTextureID)(uintptr_t)lake_image.gl_id(), ImVec2(window_w, window_h), ImVec2(0,0), ImVec2(1,1), ImVec4(255,255,255,255), ImVec4(255,255,255,0));
+		}
+		ImGui::End();
+
 		ImGui::SetNextWindowSize(ImVec2(window_w/2, window_h), ImGuiSetCond_Always);
 		ImGui::SetNextWindowPos(ImVec2(0.f, 0.f), ImGuiSetCond_Always);
+		
 		ImGui::Begin("Pilot Console", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 		//if (mode == 0) //pilot
 		{
 			{
-				ImGui::Image((ImTextureID)(uintptr_t)lake_image.gl_id(), ImVec2(100, 50), ImVec2(0,0), ImVec2(1,1), ImVec4(255,255,255,255), ImVec4(255,255,255,0));
-				
+				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
+
 				static std::vector<advd::StreamRef> videostream_refs;
 				static std::string videostream_ref_id = "";
 				static int videostream_ref_index = -1;
@@ -486,7 +503,6 @@ int run()
 							if (videostream_ref_index != -1)
 							{
 								vid.open(videostream_refs[videostream_ref_index]);
-								lake_image = vid.current_frame();
 							}
 							else
 							{
