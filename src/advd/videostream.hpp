@@ -61,7 +61,6 @@ namespace advd
 			assert(avcodec_parameters_to_context(codec_ctx, format_ctx->streams[stream_index]->codecpar) >= 0);
 			
 			AVCodec *codec = avcodec_find_decoder(codec_ctx->codec_id);
-			//std::cout << (codec_ctx->codec_id == AV_CODEC_ID_RAWVIDEO) << '\n';
 			assert(avcodec_open2(codec_ctx, codec, NULL) >= 0);
 
 			raw_frame = av_frame_alloc();
@@ -74,24 +73,10 @@ namespace advd
 			avpicture_fill((AVPicture *) converted_frame, frame_buffer, AV_PIX_FMT_RGB24, codec_ctx->width, codec_ctx->height);
 			
 			conv_ctx = sws_getContext(codec_ctx->width,
-                codec_ctx->height, codec_ctx->pix_fmt, codec_ctx->width,
-                codec_ctx->height, AV_PIX_FMT_RGB24, SWS_BICUBIC, NULL,
-                NULL, NULL);
-//sws_getCachedContext(NULL, codec_ctx->width, codec_ctx->height, codec_ctx->pix_fmt, codec_ctx->width, codec_ctx->height, AV_PIX_FMT_RGB24, SWS_BICUBIC, NULL, NULL, NULL);
+			codec_ctx->height, codec_ctx->pix_fmt, codec_ctx->width,
+			codec_ctx->height, AV_PIX_FMT_RGB24, SWS_BICUBIC, NULL,
+			NULL, NULL);
 			assert(conv_ctx != NULL);
-
-			#if 0
-			/*
-				ubyte*           frameBuffer; 
-				int              frameBytes;
-			*/
-			frameBytes = avpicture_get_size(AVPixelFormat.AV_PIX_FMT_RGB24, codecContext.width, codecContext.height);
-    		frameBuffer = cast(ubyte*) av_malloc(frameBytes * ubyte.sizeof);
-			avpicture_fill(cast(AVPicture*) convertedFrame, frameBuffer, AVPixelFormat.AV_PIX_FMT_RGB24, codecContext.width, codecContext.height);
-
-     		imageConversionContext = sws_getCachedContext(null, codecContext.width, codecContext.height, codecContext.pix_fmt, codecContext.width, codecContext.height, AVPixelFormat.AV_PIX_FMT_RGB24, SWS_BICUBIC, null, null, null);
-			if (imageConversionContext == null) return false;
-			#endif
 		}
 
 	public:
@@ -141,7 +126,6 @@ namespace advd
 					if(is_frame_finished)
 					{
 						sws_scale(conv_ctx, raw_frame->data, raw_frame->linesize, 0, codec_ctx->height, converted_frame->data, converted_frame->linesize);
-						//auto t = texture_t::from_data((unsigned char *) converted_frame->data[0], {codec_ctx->width, codec_ctx->height}, 3);
 						auto t = TextureData {codec_ctx->width, codec_ctx->height, (unsigned char *) converted_frame->data[0]}; //TODO - this is not good. You have to copy the data - so find out how large it is in the docs.
 						av_packet_unref(&current_packet);
 						return t;

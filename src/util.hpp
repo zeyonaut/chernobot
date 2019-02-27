@@ -8,7 +8,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_keycode.h>
 
-class window_t // Did you ever hear of the tragedy of Darth Plagueis the Wise?
+class window_t
 {
 	SDL_Window *m_sdl_window;
 	SDL_GLContext m_gl_context;
@@ -19,7 +19,7 @@ public:
 
 	window_t ()
 	{
-		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK) != 0) // TODO expose a single-use initializer
+		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK) != 0)
 		{
 			printf("Error: %s\n", SDL_GetError());
 			throw "a fit"; // TODO proper error handling for SDL & GL. I wonder if a separate function is a good idea?
