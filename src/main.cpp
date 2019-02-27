@@ -44,6 +44,8 @@ extern "C"
 #include <future>
 #include <thread>
 
+#include <opencv2/core/mat.hpp>
+
 int run();
 
 int main (int, char**) try {return run();} catch (...) {throw;} // Force the stack to unwind on an uncaught exception.
@@ -74,9 +76,6 @@ int run()
 		};
 	}
 
-	serial::Serial port("");
-	port.setBaudrate(115200);
-
 	std::array<uint16_t, 12> pin_data;
 
 	Controls c;
@@ -91,8 +90,6 @@ int run()
 
 	serial::Serial prt("");
 	prt.setBaudrate(115200);
-
-	bool running = true;
 
 	int acceleration = 33; 
 	int eleveration = 400;//percent per second
@@ -221,6 +218,7 @@ int run()
 	
 	std::future<TextureData> future_video_frame;
 
+	bool running = true;
 	while (running)
 	{	
 		
@@ -422,6 +420,12 @@ int run()
 
 						if (last_id != videostream_ref_id)
 						{
+							if (future_video_frame.valid())
+							{
+								// Let's get the frame before any invalidation occurs.
+								future_video_frame.wait(); future_video_frame.get();
+							}
+
 							if (videostream_ref_index != -1)
 							{
 								vid.open(videostream_refs[videostream_ref_index]);
@@ -558,10 +562,5 @@ int run()
 		window.update();
 	}
 
-	std::cout <<"waiting\n";
-
-	future_video_frame.get();
-
-	std::cout <<"patience paid off\n";
 	return 0;
 }
