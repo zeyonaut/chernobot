@@ -318,6 +318,7 @@ int run()
 			c.moclaw += (acceleration * time * 0.5);
 		}
 		else c.moclaw = 0;
+		
 
 		if (joystick_index >= -1)
 		{
@@ -368,7 +369,7 @@ int run()
 			else elevate_amt = 0;
 		}
 
-		c.up = (int)elevate_amt;
+		//c.up = (int)elevate_amt;
 
 		key_last = std::chrono::high_resolution_clock::now();
 
@@ -469,7 +470,7 @@ int run()
 			update_imgui_stopwatch();
 
 			int max = 400;
-
+		
 			if (ImGui::RadioButton("Use Trigger Elevation", is_using_bool_elev)) is_using_bool_elev = true; ImGui::SameLine();
 			if (ImGui::RadioButton("Be a Scrub", !is_using_bool_elev)) is_using_bool_elev = false;
 
@@ -557,5 +558,10 @@ int run()
 		window.update();
 	}
 
+	std::cout <<"waiting\n";
+
+	future_video_frame.get();
+
+	std::cout <<"patience paid off\n";
 	return 0;
 }
