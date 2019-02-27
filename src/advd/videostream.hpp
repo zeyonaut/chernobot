@@ -3,7 +3,15 @@
 
 #include <iostream>
 
-#include "../util.hpp"
+extern "C"
+{
+#include <libavdevice/avdevice.h>
+#include <libavcodec/avcodec.h>
+#include <libavformat/avformat.h>
+#include <libavfilter/avfilter.h>
+#include <libavutil/avutil.h>
+#include <libswscale/swscale.h>
+}
 
 namespace advd
 {
@@ -116,7 +124,7 @@ namespace advd
 			m_is_open = false;
 		}
 
-		texture_t current_frame ()
+		TextureData current_frame ()
 		{
 			AVPacket current_packet;
 			av_init_packet(&current_packet);
@@ -133,8 +141,8 @@ namespace advd
 					if(is_frame_finished)
 					{
 						sws_scale(conv_ctx, raw_frame->data, raw_frame->linesize, 0, codec_ctx->height, converted_frame->data, converted_frame->linesize);
-						auto t = texture_t::from_data((unsigned char *) converted_frame->data[0], {codec_ctx->width, codec_ctx->height}, 3);
-				
+						//auto t = texture_t::from_data((unsigned char *) converted_frame->data[0], {codec_ctx->width, codec_ctx->height}, 3);
+						auto t = TextureData {codec_ctx->width, codec_ctx->height, (unsigned char *) converted_frame->data[0]}; //TODO - this is not good. You have to copy the data - so find out how large it is in the docs.
 						av_packet_unref(&current_packet);
 						return t;
 					}

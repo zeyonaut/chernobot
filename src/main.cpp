@@ -5,8 +5,8 @@
 #include "stb_image.h"
 
 #include <glad/glad.h>
-#include <SDL.h>
-#include <SDL_keycode.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_keycode.h>
 
 #include "util/imgui_impl_sdl_gl3.h"
 
@@ -32,7 +32,6 @@ extern "C"
 #include <libswscale/swscale.h>
 }
 
-
 #include "util/fin.h"
 
 #include "util.hpp"
@@ -42,7 +41,8 @@ extern "C"
 #include "advd/streamref.hpp"
 #include "advd/videostream.hpp"
 
-
+#include <future>
+#include <thread>
 
 
 int run();
@@ -291,13 +291,36 @@ int run()
 
 	std::cout << "DBG: ID = " << lake_image.gl_id() << '\n';
 	
+	std::future<TextureData> future_video_frame;
+
 	while (running)
 	{	
+		
+		if (vid.is_open() && !future_video_frame.valid())
+		{
+			std::cout<<"x\n";
+			future_video_frame = std::async(std::launch::async, [&] {return vid.current_frame();});
+			std::cout<<"s\n";
+		}
 
-		if (vid.is_open())
+		/*if (vid.is_open())
 		{
 			lake_image =
 			vid.current_frame();
+		}*/
+			std::cout<<"n\n";
+		if (future_video_frame.valid() && future_video_frame.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
+		{
+			std::cout<<"a\n";
+			auto a = future_video_frame.get();
+			lake_image = texture_t::from_data(a.data, {a.w, a.h}, 3);
+
+			std::cout<<"b\n";
+			if (vid.is_open())
+			{
+			std::cout<<"c\n";
+				future_video_frame = std::async(std::launch::async, [&] {return vid.current_frame();});
+			}
 		}
 
 		/*

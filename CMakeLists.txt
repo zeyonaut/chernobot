@@ -11,6 +11,7 @@ set(BIN_DIR ${Chernobot_SOURCE_DIR}/bin)
 if(APPLE)
 	if (EXISTS "/usr/local/bin/clang")
 		set(CMAKE_CXX_COMPILER "/usr/local/bin/clang")
+		include_directories("/usr/local/include")
 	endif()
 endif()
 
@@ -58,7 +59,7 @@ find_path(AVCODEC_INCLUDE_DIR libavcodec/avcodec.h)
 find_path(AVFORMAT_INCLUDE_DIR libavformat/avformat.h)
 find_path(AVUTIL_INCLUDE_DIR libavutil/avutil.h)
 find_path(AVDEVICE_INCLUDE_DIR libavdevice/avdevice.h) #TODO dont be lazy, include swscale and avfilter
-target_include_directories(Chernobot PRIVATE ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR} ${AVUTIL_INCLUDE_DIR} ${AVDEVICE_INCLUDE_DIR})
+target_include_directories(Chernobot PRIVATE "/usr/local/include/SDL2" ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR} ${AVUTIL_INCLUDE_DIR} ${AVDEVICE_INCLUDE_DIR})
 
 find_library( AVUTIL_LIBRARY
   NAMES avutil

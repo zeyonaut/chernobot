@@ -4,6 +4,10 @@
 #include <string_view>
 #include "expected.hpp"
 
+#include <glad/glad.h>
+#include <SDL2/SDL.h>
+#include <SDL2/SDL_keycode.h>
+
 class window_t // Did you ever hear of the tragedy of Darth Plagueis the Wise?
 {
 	SDL_Window *m_sdl_window;
@@ -59,6 +63,13 @@ public:
 
 		return {w, h};
 	}
+};
+
+struct TextureData
+{
+	int w;
+	int h;
+	unsigned char *data;
 };
 
 class texture_t
