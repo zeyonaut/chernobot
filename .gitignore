@@ -2,3 +2,6 @@ bin/
 tmp/
 build
 CMakeCache.txt
+.vscode/
+imgui.ini
+CMakeFiles
