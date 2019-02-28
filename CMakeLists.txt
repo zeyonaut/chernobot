@@ -1,12 +1,12 @@
 cmake_minimum_required(VERSION 3.13)
 
-project(Chernobot)
+project(chernobot)
 
 set(CMAKE_CXX_STANDARD 17)
 
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${Chernobot_SOURCE_DIR}/cmake")
 
-set(BIN_DIR ${Chernobot_SOURCE_DIR}/bin)
+set(BIN_DIR ${Chernobot_SOURCE_DIR})
 
 if(APPLE)
 	if (EXISTS "/usr/local/bin/clang")
@@ -40,7 +40,7 @@ include_directories(${Chernobot_SOURCE_DIR}/ext)
 include_directories(${Chernobot_SOURCE_DIR}/ext/expected/tl)
 include_directories(${Chernobot_SOURCE_DIR}/ext/stb)
 
-add_executable(Chernobot src/main.cpp)
+add_executable(chernobot src/main.cpp)
 
 if(APPLE)
 	add_definitions(-x objective-c++)
@@ -53,13 +53,13 @@ if(APPLE)
 endif()
 
 
-target_sources(Chernobot PUBLIC ${PLATFORM_FILES})
+target_sources(chernobot PUBLIC ${PLATFORM_FILES})
 
 find_path(AVCODEC_INCLUDE_DIR libavcodec/avcodec.h)
 find_path(AVFORMAT_INCLUDE_DIR libavformat/avformat.h)
 find_path(AVUTIL_INCLUDE_DIR libavutil/avutil.h)
 find_path(AVDEVICE_INCLUDE_DIR libavdevice/avdevice.h) #TODO dont be lazy, include swscale and avfilter
-target_include_directories(Chernobot PRIVATE "/usr/local/include/SDL2" ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR} ${AVUTIL_INCLUDE_DIR} ${AVDEVICE_INCLUDE_DIR})
+target_include_directories(chernobot PRIVATE "/usr/local/include/SDL2" ${AVCODEC_INCLUDE_DIR} ${AVFORMAT_INCLUDE_DIR} ${AVUTIL_INCLUDE_DIR} ${AVDEVICE_INCLUDE_DIR})
 
 find_library( AVUTIL_LIBRARY
   NAMES avutil
@@ -148,26 +148,26 @@ find_library( SWSCALE_LIBRARY
 
 
 file(GLOB_RECURSE Chernobot_SRC "src/*.cpp")
-target_sources(Chernobot PUBLIC ${Chernobot_SRC})
+target_sources(chernobot PUBLIC ${Chernobot_SRC})
 file(GLOB Imgui_SRC "ext/imgui/*.cpp")
-target_sources(Chernobot PUBLIC ${Imgui_SRC})
+target_sources(chernobot PUBLIC ${Imgui_SRC})
 file(GLOB_RECURSE Serial_SRC "ext/serial/src/*.cc")
-target_sources(Chernobot PUBLIC ${Serial_SRC})
+target_sources(chernobot PUBLIC ${Serial_SRC})
 file(GLOB_RECURSE Qfs_SRC "ext/qfs-cpp/*.cpp")
-target_sources(Chernobot PUBLIC ${Qfs_SRC})
-target_sources(Chernobot PUBLIC ${Chernobot_SOURCE_DIR}/ext/glad/src/glad.c)
-target_link_libraries(Chernobot ${SDL2_LIBRARY})
+target_sources(chernobot PUBLIC ${Qfs_SRC})
+target_sources(chernobot PUBLIC ${Chernobot_SOURCE_DIR}/ext/glad/src/glad.c)
+target_link_libraries(chernobot ${SDL2_LIBRARY})
 find_package(OpenCV REQUIRED)
-target_link_libraries(Chernobot ${OpenCV_LIBS})
-target_link_libraries(Chernobot ${AVUTIL_LIBRARY} ${AVDEVICE_LIBRARY} ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVFILTER_LIBRARY} ${SWSCALE_LIBRARY})
-#target_link_libraries(Chernobot "-lavutil" "-lavdevice" "-lavcodec" "-lavformat" "-lavfilter" "-lswscale")
+target_link_libraries(chernobot ${OpenCV_LIBS})
+target_link_libraries(chernobot ${AVUTIL_LIBRARY} ${AVDEVICE_LIBRARY} ${AVCODEC_LIBRARY} ${AVFORMAT_LIBRARY} ${AVFILTER_LIBRARY} ${SWSCALE_LIBRARY})
+#target_link_libraries(chernobot "-lavutil" "-lavdevice" "-lavcodec" "-lavformat" "-lavfilter" "-lswscale")
 message( "AVUTIL_LIBRARY is ${AVDEVICE_LIBRARY}" )
 #dependencies for serial lib - replace with rs232 also incomplete for linux and windows
 if(APPLE)
 	find_library(IOKIT_LIBRARY IOKit)
 	find_library(FOUNDATION_LIBRARY Foundation)
-	target_link_libraries(Chernobot ${FOUNDATION_LIBRARY} ${IOKIT_LIBRARY})
+	target_link_libraries(chernobot ${FOUNDATION_LIBRARY} ${IOKIT_LIBRARY})
 endif()
 
 
-install(TARGETS Chernobot RUNTIME DESTINATION ${BIN_DIR})
+install(TARGETS chernobot RUNTIME DESTINATION ${BIN_DIR})
