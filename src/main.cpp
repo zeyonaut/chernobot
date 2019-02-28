@@ -44,11 +44,31 @@ extern "C"
 #include <future>
 #include <thread>
 
+#include <optional>
+
 #include <opencv2/core/mat.hpp>
 
 int run();
 
 int main (int, char**) try {return run();} catch (...) {throw;} // Force the stack to unwind on an uncaught exception.
+
+void show_framerate_meter()
+{
+	const float distance = 6.f;
+
+	ImGuiIO& io = ImGui::GetIO();
+
+	ImVec2 window_pos = ImVec2(io.DisplaySize.x - distance, distance);
+		
+	ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, ImVec2(1.f, 0.f));
+	ImGui::SetNextWindowBgAlpha(240.f/255.f); // Transparent background
+	
+	if (ImGui::Begin("framerate_meter", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
+	{
+		ImGui::Text("%1.f f/s", ImGui::GetIO().Framerate);
+	}
+	ImGui::End();
+}
 
 int run()
 {
@@ -68,6 +88,23 @@ int run()
 		style.Alpha = 1.f;
 		style.WindowBorderSize= 0.f;
 		style.FrameBorderSize= 0.f;
+
+		ImVec4* colors = style.Colors;
+		colors[ImGuiCol_WindowBg]			   = ImVec4(0.10f, 0.10f, 0.12f, 1.00f);
+		colors[ImGuiCol_ChildBg]				= ImVec4(0.08f, 0.08f, 0.09f, 1.00f);
+		colors[ImGuiCol_Border]				 = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
+		colors[ImGuiCol_FrameBg]				= ImVec4(0.14f, 0.14f, 0.16f, 1.00f);
+		colors[ImGuiCol_FrameBgHovered]		 = ImVec4(0.16f, 0.16f, 0.19f, 1.00f);
+		colors[ImGuiCol_FrameBgActive]		  = ImVec4(0.19f, 0.19f, 0.25f, 1.00f);
+		colors[ImGuiCol_TitleBg]				= ImVec4(0.08f, 0.08f, 0.09f, 1.00f);
+		colors[ImGuiCol_TitleBgActive]		  = ImVec4(0.08f, 0.08f, 0.09f, 1.00f);
+		colors[ImGuiCol_TitleBgCollapsed]	   = ImVec4(0.08f, 0.08f, 0.09f, 1.00f);
+		colors[ImGuiCol_MenuBarBg]			  = ImVec4(0.08f, 0.08f, 0.09f, 1.00f);
+		colors[ImGuiCol_ScrollbarBg]			= ImVec4(0.00f, 0.00f, 0.00f, 0.50f);
+		colors[ImGuiCol_CheckMark]			  = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
+		colors[ImGuiCol_ModalWindowDarkening]	   = ImVec4(0.00f, 0.00f, 0.00f, 0.38f);
+
+
 
 		fin += []()
 		{
@@ -106,8 +143,7 @@ int run()
 
 	bool is_using_bool_elev = true;
 
-	texture_t lake_image = texture_t::from_path(qfs::real_path(qfs::dir(qfs::exe_path()) + "../res/lake.png")).value();
-	auto const [w, h] = lake_image.size();
+	std::optional<texture_t> current_frame;
 
 	const float PI = 3.1415926;
 
@@ -214,8 +250,6 @@ int run()
 
 	advd::Videostream vid {};
 
-	std::cout << "DBG: ID = " << lake_image.gl_id() << '\n';
-	
 	std::future<TextureData> future_video_frame;
 
 	bool running = true;
@@ -230,7 +264,7 @@ int run()
 		if (future_video_frame.valid() && future_video_frame.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
 		{
 			auto a = future_video_frame.get();
-			lake_image = texture_t::from_data(a.data, {a.w, a.h}, 3);
+			current_frame = texture_t::from_data(a.data, {a.w, a.h}, 3);
 
 			if (vid.is_open())
 			{
@@ -373,22 +407,31 @@ int run()
 
 		std::vector<serial::PortInfo> portinfo = serial::list_ports();
 
+		
 		ImGui::SetNextWindowSize(ImVec2(window_w, window_h), ImGuiSetCond_Always);
 		ImGui::SetNextWindowPos(ImVec2(0.f, 0.f), ImGuiSetCond_Always);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2 {0.f, 0.f});
 		ImGui::Begin("Oculus", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 		{
-			ImGui::Image((ImTextureID)(uintptr_t)lake_image.gl_id(), ImVec2(window_w, window_h), ImVec2(0,0), ImVec2(1,1), ImVec4(255,255,255,255), ImVec4(255,255,255,0));
+			if (current_frame) ImGui::Image((ImTextureID)(uintptr_t)current_frame->gl_id(), ImVec2(window_w, window_h), ImVec2(0,0), ImVec2(1,1), ImVec4(255,255,255,255), ImVec4(255,255,255,0));
+			else
+			{
+				auto size = ImGui::CalcTextSize("[No Videostream Connected]");
+				
+				ImGui::SetCursorPos(ImVec2 {(window_w - size.x) / 2, (window_h - size.y) / 2});
+
+				ImGui::Text("[No Videostream Connected]");
+			}
 		}
 		ImGui::End();
+		ImGui::PopStyleVar();
 
 		ImGui::SetNextWindowSize(ImVec2(window_w/2, window_h), ImGuiSetCond_Always);
 		ImGui::SetNextWindowPos(ImVec2(0.f, 0.f), ImGuiSetCond_Always);
-		
+		ImGui::SetNextWindowBgAlpha(240.f/255.f); // Transparent background
 		ImGui::Begin("Pilot Console", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 		{
 			{
-				ImGui::Text("Application average %.3f ms/frame (%.1f FPS)", 1000.0f / ImGui::GetIO().Framerate, ImGui::GetIO().Framerate);
-
 				static std::vector<advd::StreamRef> videostream_refs;
 				static std::string videostream_ref_id = "";
 				static int videostream_ref_index = -1;
@@ -433,6 +476,7 @@ int run()
 							else
 							{
 								vid.close();
+								current_frame.reset();
 							}
 
 							last_id = videostream_ref_id;
@@ -553,6 +597,8 @@ int run()
 			ImGui::PopItemWidth();
 		}
 		ImGui::End();
+
+		show_framerate_meter();
 		
 		glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
 		glClear(GL_COLOR_BUFFER_BIT);
