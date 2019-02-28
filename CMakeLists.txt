@@ -4,9 +4,9 @@ project(chernobot)
 
 set(CMAKE_CXX_STANDARD 17)
 
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${Chernobot_SOURCE_DIR}/cmake")
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${chernobot_SOURCE_DIR}/cmake")
 
-set(BIN_DIR ${Chernobot_SOURCE_DIR})
+set(BIN_DIR ${chernobot_SOURCE_DIR})
 
 if(APPLE)
 	if (EXISTS "/usr/local/bin/clang")
@@ -33,12 +33,12 @@ find_package(FFMPEG REQUIRED)
 # Build executable
 include_directories(${Boost_INCLUDE_DIR})
 include_directories(${SDL2_INCLUDE_DIR})
-include_directories(${Chernobot_SOURCE_DIR}/ext/glad/include)
-include_directories(${Chernobot_SOURCE_DIR}/ext/imgui)
-include_directories(${Chernobot_SOURCE_DIR}/ext/serial/include)
-include_directories(${Chernobot_SOURCE_DIR}/ext)
-include_directories(${Chernobot_SOURCE_DIR}/ext/expected/tl)
-include_directories(${Chernobot_SOURCE_DIR}/ext/stb)
+include_directories(${chernobot_SOURCE_DIR}/ext/glad/include)
+include_directories(${chernobot_SOURCE_DIR}/ext/imgui)
+include_directories(${chernobot_SOURCE_DIR}/ext/serial/include)
+include_directories(${chernobot_SOURCE_DIR}/ext)
+include_directories(${chernobot_SOURCE_DIR}/ext/expected/tl)
+include_directories(${chernobot_SOURCE_DIR}/ext/stb)
 
 add_executable(chernobot src/main.cpp)
 
@@ -147,15 +147,15 @@ find_library( SWSCALE_LIBRARY
 )
 
 
-file(GLOB_RECURSE Chernobot_SRC "src/*.cpp")
-target_sources(chernobot PUBLIC ${Chernobot_SRC})
+file(GLOB_RECURSE chernobot_SRC "src/*.cpp")
+target_sources(chernobot PUBLIC ${chernobot_SRC})
 file(GLOB Imgui_SRC "ext/imgui/*.cpp")
 target_sources(chernobot PUBLIC ${Imgui_SRC})
 file(GLOB_RECURSE Serial_SRC "ext/serial/src/*.cc")
 target_sources(chernobot PUBLIC ${Serial_SRC})
 file(GLOB_RECURSE Qfs_SRC "ext/qfs-cpp/*.cpp")
 target_sources(chernobot PUBLIC ${Qfs_SRC})
-target_sources(chernobot PUBLIC ${Chernobot_SOURCE_DIR}/ext/glad/src/glad.c)
+target_sources(chernobot PUBLIC ${chernobot_SOURCE_DIR}/ext/glad/src/glad.c)
 target_link_libraries(chernobot ${SDL2_LIBRARY})
 find_package(OpenCV REQUIRED)
 target_link_libraries(chernobot ${OpenCV_LIBS})

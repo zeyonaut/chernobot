@@ -27,7 +27,7 @@ mkdir tmp
 cd tmp
 cmake .. -GNinja
 ninja install
-../bin/chernobot
+../chernobot
 ```
 
 ### MATE 2019
