@@ -175,7 +175,7 @@ int run()
 		}
 		else
 		{
-			current_stopwatch = ((std::chrono::high_resolution_clock::now() - inital_time).count()) (/ 1000000000;
+			current_stopwatch = ((std::chrono::high_resolution_clock::now() - inital_time).count()) / 1000000000;
 			if (lap_state && !lap_state_previous)
 			{
 				lap_state_previous = true;
