@@ -13,7 +13,6 @@ namespace advd
 		template <class T> StreamRef(T t): m_handle(t) {}
 
 	public:
-
 		~StreamRef();
 
 		std::string id () const;

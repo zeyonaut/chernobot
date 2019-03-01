@@ -16,7 +16,7 @@
 #include <string> 
 #include <array>
 
-#include <qfs-cpp/qfs.hpp> //qfs doesn't work in linux - use std namespaced strcmp. Also, exe_path doesn't work.
+#include <qfs-cpp/qfs.hpp> // qfs doesn't work in linux - use std namespaced strcmp. Also, exe_path doesn't work.
 
 #include "overseer.h"
 
@@ -76,7 +76,7 @@ int run()
 	
 	avdevice_register_all();
 
-	window_t window;
+	Window window;
 
 	{
 		ImGui::CreateContext();
@@ -133,7 +133,7 @@ int run()
 
 	bool is_using_bool_elev = true;
 
-	std::optional<texture_t> current_frame;
+	std::optional<Texture> current_frame;
 
 	auto key_last = std::chrono::high_resolution_clock::now();
 	auto key_now = std::chrono::high_resolution_clock::now();
@@ -151,7 +151,7 @@ int run()
 		ImGui::SameLine();
 		bool lap_state = ImGui::Button("Lap");
 		ImGui::SameLine();
-		if(ImGui::Button("Reset"))
+		if (ImGui::Button("Reset"))
 		{
 			inital_time = std::chrono::high_resolution_clock::now();
 			maintain_time_proper = std::chrono::high_resolution_clock::now() - std::chrono::high_resolution_clock::now();
@@ -159,13 +159,13 @@ int run()
 		}
 		ImGui::SameLine();
 		int current_stopwatch;
-		if(!clock_state)
+		if (!clock_state)
 		{
-			if(stopwatch_state && !clock_state_previous)
+			if (stopwatch_state && !clock_state_previous)
 			{
 				clock_state_previous = true;
 			}
-			else if(!stopwatch_state && clock_state_previous)
+			else if (!stopwatch_state && clock_state_previous)
 			{
 				inital_time = std::chrono::high_resolution_clock::now() - maintain_time_proper;
 				clock_state = true;
@@ -175,22 +175,22 @@ int run()
 		}
 		else
 		{
-			current_stopwatch = ((std::chrono::high_resolution_clock::now() - inital_time).count())/1000000000;
-			if(lap_state && !lap_state_previous)
+			current_stopwatch = ((std::chrono::high_resolution_clock::now() - inital_time).count()) (/ 1000000000;
+			if (lap_state && !lap_state_previous)
 			{
 				lap_state_previous = true;
 			}
-			else if(!lap_state && lap_state_previous)
+			else if (!lap_state && lap_state_previous)
 			{
 				lap_state_previous = false;
 				lapped_seconds.push_back(current_stopwatch);
 			}
 
-			if(stopwatch_state && !clock_state_previous)
+			if (stopwatch_state && !clock_state_previous)
 			{
 				clock_state_previous = true;
 			}
-			else if(!stopwatch_state && clock_state_previous)
+			else if (!stopwatch_state && clock_state_previous)
 			{
 				maintain_time_proper = std::chrono::high_resolution_clock::now() - inital_time;
 				clock_state = false;
@@ -207,13 +207,13 @@ int run()
 
 		for(int i = 1; i <= 5 ; i++)
 		{
-			if(lapped_seconds.size() + 1 > i)
+			if (lapped_seconds.size() + 1 > i)
 			{
 				ImGui::Text("Lap Time %02d: %02d:%02d", (int)(lapped_seconds.size() - i + 1),(int)((int)(lapped_seconds[lapped_seconds.size() - i])/60), (int)((int)(lapped_seconds[lapped_seconds.size() - i])%60));
 			}
 		}
 
-		if(lapped_seconds.size() <= 5)
+		if (lapped_seconds.size() <= 5)
 		{
 			for(int i = 0; i < 5 - lapped_seconds.size(); i++)
 			{
@@ -240,7 +240,7 @@ int run()
 		if (future_video_frame.valid() && future_video_frame.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
 		{
 			auto a = future_video_frame.get();
-			current_frame = texture_t::from_data(a.data, {a.w, a.h}, 3);
+			current_frame = Texture::from_data(a.data, {a.w, a.h}, 3);
 
 			if (vid.is_open())
 			{
@@ -249,7 +249,7 @@ int run()
 		}
 
 		/*
-			INPUT CALCULATION AND STUFF
+		INPUT CALCULATION AND STUFF
 		*/
 
 		auto const [window_w, window_h] = window.size();
@@ -259,76 +259,75 @@ int run()
 		{
 			ImGui_ImplSdlGL3_ProcessEvent(&event);
 			if (event.type == SDL_QUIT) running = false;
-			else if(event.type == SDL_KEYDOWN && event.key.repeat == 0)
+			else if (event.type == SDL_KEYDOWN && event.key.repeat == 0)
 			{}
 		}
 		ImGui_ImplSdlGL3_NewFrame(window.sdl_window());
 
 		key_now = std::chrono::high_resolution_clock::now();
 		double time = std::chrono::duration_cast<std::chrono::duration<double>>(key_now - key_last).count();
-		const Uint8* currentKeyStates = SDL_GetKeyboardState( NULL );
+		const Uint8* currentKeyStates = SDL_GetKeyboardState(NULL);
 
-		int mdz = 4; //motor deadzone magnitude -- currently, the dead band appears to be around 4 times the intended magnitude. Please fix.
-		if( currentKeyStates[ SDL_SCANCODE_W ] )
+		int mdz = 4; // Motor deadzone magnitude -- currently, the dead band appears to be around 4 times the intended magnitude. Please fix.
+		if (currentKeyStates[SDL_SCANCODE_W])
 		{
 			if (c.forward < mdz) c.forward = mdz; 
 			c.forward += (acceleration * time);
 		}
-		else if( currentKeyStates[ SDL_SCANCODE_S ] )
+		else if (currentKeyStates[SDL_SCANCODE_S])
 		{
 			if (c.forward > -mdz) c.forward = -mdz; 
 			c.forward -= (acceleration * time);
 		}
 		else c.forward = 0;
 
-		if( currentKeyStates[ SDL_SCANCODE_A ] )
+		if (currentKeyStates[SDL_SCANCODE_A])
 		{
 			if (c.right > -mdz) c.right = -mdz; 
 			c.right -= (acceleration * time);
 		}
-		else if( currentKeyStates[ SDL_SCANCODE_D ] )
+		else if (currentKeyStates[SDL_SCANCODE_D])
 		{
 			if (c.right < mdz) c.right = mdz; 
 			c.right += (acceleration * time);
 		}
 		else c.right = 0;
 
-		if( currentKeyStates[ SDL_SCANCODE_I ] )
+		if (currentKeyStates[SDL_SCANCODE_I])
 		{
 			if (c.up < mdz) c.up = mdz; 
 			c.up += (acceleration * time);
 		}
-		else if( currentKeyStates[ SDL_SCANCODE_K ] )
+		else if (currentKeyStates[SDL_SCANCODE_K])
 		{
 			if (c.up > -mdz) c.up = -mdz; 
 			c.up -= (acceleration * time);
 		}
 		else c.up = 0;
 
-		if( currentKeyStates[ SDL_SCANCODE_J ] )
+		if (currentKeyStates[SDL_SCANCODE_J])
 		{
 			if (c.clockwise > -mdz) c.clockwise = -mdz; 
 			c.clockwise -= (acceleration * time);
 		}
-		else if( currentKeyStates[ SDL_SCANCODE_L ] )
+		else if (currentKeyStates[SDL_SCANCODE_L])
 		{
 			if (c.clockwise < mdz) c.clockwise = mdz; 
 			c.clockwise += (acceleration * time);
 		}
 		else c.clockwise = 0;
 
-		if( currentKeyStates[ SDL_SCANCODE_U ] )
+		if (currentKeyStates[SDL_SCANCODE_U])
 		{
 			if (c.moclaw > 0) c.moclaw = 0; 
 			c.moclaw -= (acceleration * time * 0.5);
 		}
-		else if( currentKeyStates[ SDL_SCANCODE_O ] )
+		else if (currentKeyStates[SDL_SCANCODE_O])
 		{
 			if (c.moclaw < 0) c.moclaw = 0; 
 			c.moclaw += (acceleration * time * 0.5);
 		}
 		else c.moclaw = 0;
-		
 
 		if (joystick_index >= -1)
 		{
@@ -349,17 +348,17 @@ int run()
 
 				if (SDL_JoystickNumButtons(joy) >= 2)
 				{
-					//TODO: null cancellation
-					if(SDL_JoystickGetButton(joy, 0) == 1 && SDL_JoystickGetButton(joy, 1) == 0) elevate_direction = -1;
-					else if(SDL_JoystickGetButton(joy, 0) == 0 && SDL_JoystickGetButton(joy, 1) == 1) elevate_direction = 1;
+					// TODO: null cancellation
+					if (SDL_JoystickGetButton(joy, 0) == 1 && SDL_JoystickGetButton(joy, 1) == 0) elevate_direction = -1;
+					else if (SDL_JoystickGetButton(joy, 0) == 0 && SDL_JoystickGetButton(joy, 1) == 1) elevate_direction = 1;
 					else elevate_direction = 0;
 				}
 
 				if (SDL_JoystickNumButtons(joy) >= 12)
 				{
-					//TODO: null cancellation
-					if(SDL_JoystickGetButton(joy, 10) == 1) c.clockwise = 3 * c.clockwise/2;
-					if(SDL_JoystickGetButton(joy, 11) == 1) c.clockwise =  2 * c.clockwise;
+					// TODO: null cancellation
+					if (SDL_JoystickGetButton(joy, 10) == 1) c.clockwise = 3 * c.clockwise/2;
+					if (SDL_JoystickGetButton(joy, 11) == 1) c.clockwise =  2 * c.clockwise;
 				}
 
 				SDL_JoystickClose(joy);
@@ -385,7 +384,6 @@ int run()
 
 		std::vector<serial::PortInfo> portinfo = serial::list_ports();
 
-		
 		ImGui::SetNextWindowSize(ImVec2(window_w, window_h), ImGuiSetCond_Always);
 		ImGui::SetNextWindowPos(ImVec2(0.f, 0.f), ImGuiSetCond_Always);
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2 {0.f, 0.f});
@@ -404,7 +402,7 @@ int run()
 		ImGui::End();
 		ImGui::PopStyleVar();
 
-		if(show_debug) ImGui::SetNextWindowSize(ImVec2(window_w/2, window_h), ImGuiSetCond_Always);
+		if (show_debug) ImGui::SetNextWindowSize(ImVec2(window_w/2, window_h), ImGuiSetCond_Always);
 		ImGui::SetNextWindowPos(ImVec2(0.f, 0.f), ImGuiSetCond_Always);
 		ImGui::SetNextWindowBgAlpha(240.f/255.f); // Transparent background
 		ImGui::Begin("Pilot Console", nullptr, (!show_debug? ImGuiWindowFlags_AlwaysAutoResize : 0) | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
@@ -465,7 +463,7 @@ int run()
 							}
 
 							last_id = videostream_ref_id;
-							last_index = videostream_ref_index; //TODO - last_index likely unnecessary
+							last_index = videostream_ref_index; // TODO - last_index likely unnecessary
 						}
 					}
 					ImGui::SameLine();

@@ -26,7 +26,7 @@ namespace advd
 
 		AVCodecContext *codec_ctx;
 		SwsContext *conv_ctx;
-		int frame_bytes; //Some of these three are probably unnecessary and can be made local. Do an investigation later.
+		int frame_bytes; // Some of these three are probably unnecessary and can be made local. Do an investigation later.
 		unsigned char *frame_buffer;
 
 		Videostream (const Videostream &other) = delete;
@@ -38,13 +38,13 @@ namespace advd
 			AVInputFormat *format = av_find_input_format("avfoundation"); // macOS only
 		
 			AVDictionary* dictionary = NULL;
-			av_dict_set(&dictionary, "framerate", "25", NULL); // ad hoc for specific REDGO converter because open_input fails if wrong framerate given on macOS.
+			av_dict_set(&dictionary, "framerate", "25", 0); // Ad hoc for specific REDGO converter because open_input fails if wrong framerate given on macOS.
 			// TODO: query device options and then give users the option to change them.
 
 			assert(avformat_open_input(&format_ctx, stream_ref.label().c_str(), format, &dictionary) == 0);
 			assert(avformat_find_stream_info(format_ctx, NULL) >= 0);
 
-			av_dump_format(format_ctx, 0, stream_ref.label().c_str(), 0); //debug only?
+			av_dump_format(format_ctx, 0, stream_ref.label().c_str(), 0); // Debug only?
 
 			stream_index = -1;
 			for (int i = 0; i < format_ctx->nb_streams; i++)
@@ -57,7 +57,7 @@ namespace advd
 			}
 			assert(stream_index != -1);
 
-			codec_ctx = avcodec_alloc_context3(NULL); //TODO free or something
+			codec_ctx = avcodec_alloc_context3(NULL); // TODO free or something
 			assert(avcodec_parameters_to_context(codec_ctx, format_ctx->streams[stream_index]->codecpar) >= 0);
 			
 			AVCodec *codec = avcodec_find_decoder(codec_ctx->codec_id);
@@ -65,7 +65,6 @@ namespace advd
 
 			raw_frame = av_frame_alloc();
 			converted_frame = av_frame_alloc();
-			
 
 			frame_bytes = avpicture_get_size(AV_PIX_FMT_RGB24, codec_ctx->width, codec_ctx->height);
 			frame_buffer = (unsigned char *) malloc(frame_bytes * sizeof(unsigned char));
@@ -80,7 +79,6 @@ namespace advd
 		}
 
 	public:
-
 		bool is_open () {return m_is_open;}
 
 		Videostream (): m_is_open(false) {}
@@ -135,7 +133,7 @@ namespace advd
 			
 			av_packet_unref(&current_packet);
 			close();
-			assert(false); // return none/unexpected.
+			assert(false); // Return none/unexpected.
 		}
 	};
 }

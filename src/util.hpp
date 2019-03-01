@@ -8,7 +8,7 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_keycode.h>
 
-class window_t
+class Window
 {
 	SDL_Window *m_sdl_window;
 	SDL_GLContext m_gl_context;
@@ -17,7 +17,7 @@ class window_t
 
 public:
 
-	window_t ()
+	Window ()
 	{
 		if (SDL_Init(SDL_INIT_VIDEO | SDL_INIT_TIMER | SDL_INIT_JOYSTICK) != 0)
 		{
@@ -42,7 +42,7 @@ public:
 		glClearColor(0, 0, 0, 1);
 	}
 
-	~window_t ()
+	~Window ()
 	{
 		SDL_GL_DeleteContext(m_gl_context);
 		SDL_DestroyWindow(m_sdl_window);
@@ -72,7 +72,7 @@ struct TextureData
 	unsigned char *data;
 };
 
-class texture_t
+class Texture
 {
 	GLuint m_gl_id;
 	int m_w;
@@ -80,19 +80,19 @@ class texture_t
 
 	enum {owned, unowned, none} m_state;
 	
-	texture_t (GLuint gl_id, int w, int h, bool is_owned): m_gl_id(gl_id), m_w(w), m_h(h), m_state(is_owned? owned : unowned) {}
+	Texture (GLuint gl_id, int w, int h, bool is_owned): m_gl_id(gl_id), m_w(w), m_h(h), m_state(is_owned? owned : unowned) {}
 
 public:
 
-	texture_t (): m_gl_id(0), m_w(0), m_h(0), m_state(none) {}
+	Texture (): m_gl_id(0), m_w(0), m_h(0), m_state(none) {}
 
-	texture_t (texture_t const &texture): m_gl_id(texture.m_gl_id), m_w(texture.m_w), m_h(texture.m_h), m_state(unowned) {}
-	texture_t (texture_t &&texture): m_gl_id(texture.m_gl_id), m_w(texture.m_w), m_h(texture.m_h), m_state(owned) {texture.m_state = unowned;}
+	Texture (Texture const &texture): m_gl_id(texture.m_gl_id), m_w(texture.m_w), m_h(texture.m_h), m_state(unowned) {}
+	Texture (Texture &&texture): m_gl_id(texture.m_gl_id), m_w(texture.m_w), m_h(texture.m_h), m_state(owned) {texture.m_state = unowned;}
 
-	texture_t &operator= (texture_t const &texture) {if (m_state == owned) glDeleteTextures(1, &m_gl_id);m_gl_id = texture.m_gl_id; m_w = texture.m_w; m_h = texture.m_h; m_state = unowned; return *this;}
-	texture_t &operator= (texture_t &&texture) {if (m_state == owned) glDeleteTextures(1, &m_gl_id); texture.m_state = unowned; m_gl_id = texture.m_gl_id; m_w = texture.m_w; m_h = texture.m_h; m_state = owned; return *this;}
+	Texture &operator= (Texture const &texture) {if (m_state == owned) glDeleteTextures(1, &m_gl_id);m_gl_id = texture.m_gl_id; m_w = texture.m_w; m_h = texture.m_h; m_state = unowned; return *this;}
+	Texture &operator= (Texture &&texture) {if (m_state == owned) glDeleteTextures(1, &m_gl_id); texture.m_state = unowned; m_gl_id = texture.m_gl_id; m_w = texture.m_w; m_h = texture.m_h; m_state = owned; return *this;}
 
-	static tl::expected<texture_t, std::string> from_path (std::string const &path)
+	static tl::expected<Texture, std::string> from_path (std::string const &path)
 	{
 		int comp, w, h; // TODO use comp
 		unsigned char* image = stbi_load(path.c_str(), &w, &h, &comp, STBI_rgb_alpha);
@@ -111,10 +111,10 @@ public:
 
 		stbi_image_free(image);
 
-		return {texture_t{gl_id, w, h, owned}};
+		return {Texture{gl_id, w, h, owned}};
 	}
 	
-	static texture_t from_data (unsigned char const *const data, std::tuple<int, int> const size, int const channels)
+	static Texture from_data (unsigned char const *const data, std::tuple<int, int> const size, int const channels)
 	{
 		GLuint gl_id;
 		glGenTextures(1, &gl_id);
@@ -129,10 +129,10 @@ public:
 		glTexImage2D(GL_TEXTURE_2D, 0, channels == 3? GL_RGB : GL_RGBA , w, h, 0, channels == 1? GL_RED : channels == 2? GL_RG : channels == 3? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, (void*) data);
 		
 		glBindTexture(GL_TEXTURE_2D, last_id);
-		return {texture_t{gl_id, w, h, owned}};
+		return {Texture{gl_id, w, h, owned}};
 	}
 
-	~texture_t ()
+	~Texture ()
 	{
 		if (m_state == owned) glDeleteTextures(1, &m_gl_id);
 	}
