@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.13)
+cmake_minimum_required(VERSION 3.10)
 
 project(chernobot)
 
@@ -19,7 +19,7 @@ endif()
 if (${CMAKE_CXX_COMPILER_ID} STREQUAL "GNU" OR ${CMAKE_CXX_COMPILER_ID} STREQUAL "Clang")
 	set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_DEBUG} -g")
 	set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS} ${CMAKE_CXX_FLAGS_RELEASE} -O2")
-	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wunused")	
+	set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wunused")
 elseif (${CMAKE_CXX_COMPILER_ID} STREQUAL "MSVC")
 	if (CMAKE_CXX_FLAGS MATCHES "/W[0-4]")
 		string(REGEX REPLACE "/W[0-4]" "/W4" CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS}")
@@ -168,6 +168,9 @@ if(APPLE)
 	find_library(IOKIT_LIBRARY IOKit)
 	find_library(FOUNDATION_LIBRARY Foundation)
 	target_link_libraries(chernobot ${FOUNDATION_LIBRARY} ${IOKIT_LIBRARY})
+endif()
+if(UNIX AND NOT APPLE)
+    target_link_libraries(chernobot dl)
 endif()
 
 
