@@ -104,8 +104,6 @@ int run()
 		colors[ImGuiCol_CheckMark]			  = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
 		colors[ImGuiCol_ModalWindowDarkening]	   = ImVec4(0.00f, 0.00f, 0.00f, 0.38f);
 
-
-
 		fin += []()
 		{
 			ImGui_ImplSdlGL3_Shutdown();
@@ -123,19 +121,11 @@ int run()
 	bool is_port_open = false;
 
 	int is_lemming = 2;
-	int mode = 0;
-
 	serial::Serial prt("");
 	prt.setBaudrate(115200);
 
 	int acceleration = 33; 
-	int eleveration = 400;//percent per second
-
-	GLuint m_texture = 0;
-
-	bool is_takeoff_sand_point = true;
-
-	bool is_error = false;
+	int eleveration = 400;
 
 	int elevate_direction = 0;
 	int elevate_magnitude = 0;
@@ -144,22 +134,6 @@ int run()
 	bool is_using_bool_elev = true;
 
 	std::optional<texture_t> current_frame;
-
-	const float PI = 3.1415926;
-
-	float heading = 184;
-	float ascent_airspeed = 93;
-	float ascent_rate = 10;
-	float time_until_failure = 43;
-	float descent_airspeed = 64;
-	float descent_rate = 6;
-	float direction = 270;
-	float wind_speed = 9.4;
-
-	int no_of_turbines = 6;
-	float rotor_diameter = 14;
-	float current_kn = 4.5;
-	float efficiency = 35;
 
 	auto key_last = std::chrono::high_resolution_clock::now();
 	auto key_now = std::chrono::high_resolution_clock::now();
@@ -252,6 +226,8 @@ int run()
 
 	std::future<TextureData> future_video_frame;
 
+	bool show_debug = true;
+
 	bool running = true;
 	while (running)
 	{	
@@ -283,6 +259,8 @@ int run()
 		{
 			ImGui_ImplSdlGL3_ProcessEvent(&event);
 			if (event.type == SDL_QUIT) running = false;
+			else if(event.type == SDL_KEYDOWN && event.key.repeat == 0)
+			{}
 		}
 		ImGui_ImplSdlGL3_NewFrame(window.sdl_window());
 
@@ -426,10 +404,10 @@ int run()
 		ImGui::End();
 		ImGui::PopStyleVar();
 
-		ImGui::SetNextWindowSize(ImVec2(window_w/2, window_h), ImGuiSetCond_Always);
+		if(show_debug) ImGui::SetNextWindowSize(ImVec2(window_w/2, window_h), ImGuiSetCond_Always);
 		ImGui::SetNextWindowPos(ImVec2(0.f, 0.f), ImGuiSetCond_Always);
 		ImGui::SetNextWindowBgAlpha(240.f/255.f); // Transparent background
-		ImGui::Begin("Pilot Console", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+		ImGui::Begin("Pilot Console", nullptr, (!show_debug? ImGuiWindowFlags_AlwaysAutoResize : 0) | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 		{
 			{
 				static std::vector<advd::StreamRef> videostream_refs;
@@ -437,6 +415,13 @@ int run()
 				static int videostream_ref_index = -1;
 				static auto last_id = videostream_ref_id;
 				static auto last_index = videostream_ref_index;
+				if (ImGui::Button("Show Debug Menu")) show_debug = !show_debug; 
+
+				if (!show_debug)
+				{
+					ImGui::End();
+					goto pilot_console_end;
+				}
 
 				if (ImGui::Button("Configure Videostream..")) 
 				{
@@ -569,34 +554,10 @@ int run()
 				prt.setPort("");
 				port_index = -1;
 			}
-
-			ImGui::NewLine();
-			ImGui::Separator();
-			ImGui::NewLine();
-
-			ImGui::PushItemWidth(0.3f * window_w);
-			ImGui::InputFloat("Heading (deg)", &heading);
-			ImGui::InputFloat("Ascent Speed (m/s)", &ascent_airspeed);
-			ImGui::InputFloat("Climb Rate (m/s)", &ascent_rate);
-			ImGui::InputFloat("Time to Failure (s)", &time_until_failure);
-			ImGui::InputFloat("Descent Speed (m/s)", &descent_airspeed);
-			ImGui::InputFloat("Sink Rate (m/s)", &descent_rate);
-			ImGui::InputFloat("Wind Direction (deg)", &direction);
-			ImGui::InputFloat("Wind Speed (m/s)", &wind_speed);
-			ImGui::PopItemWidth();
-
-			ImGui::NewLine();
-			ImGui::Separator();
-			ImGui::NewLine();
-
-			ImGui::PushItemWidth(0.3f * window_w);
-			ImGui::InputInt("# of Turbines", &no_of_turbines);
-			ImGui::InputFloat("Rotor Diameter (m)", &rotor_diameter);
-			ImGui::InputFloat("Velocity (kn)", &current_kn);
-			ImGui::InputFloat("Turbine Efficiency (%)", &efficiency);
-			ImGui::PopItemWidth();
 		}
 		ImGui::End();
+
+		pilot_console_end:
 
 		show_framerate_meter();
 		
