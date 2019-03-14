@@ -48,7 +48,11 @@ extern "C"
 #include <optional>
 #include <string_view>
 
-#include "chernobot.hpp"
+#include "configurator_selector.hpp"
+
+#include "video_interface.hpp"
+#include "comm_interface.hpp"
+#include "joystick_interface.hpp"
 
 //#include <opencv2/core/mat.hpp>
 
@@ -112,6 +116,11 @@ void show_framerate_meter()
 
 int run()
 {
+	ConfiguratorSelector<VideoInterface, CommInterface, JoystickInterface> selector;
+	VideoInterface video_interface;
+	CommInterface comm_interface;
+	JoystickInterface joystick_interface;
+
 	Fin fin;
 	
 	avdevice_register_all();
@@ -158,8 +167,6 @@ int run()
 	// TODO - get this legacy stuff under control.
 
 	int is_lemming = 2;
-	serial::Serial prt("");
-	prt.setBaudrate(115200);
 
 	int acceleration = 33; 
 	int eleveration = 400;
@@ -171,8 +178,6 @@ int run()
 	bool is_using_bool_elev = true;
 
 	// legacy end!
-
-	std::optional<Texture> current_frame;
 
 	// TODO - get this stopwatch stuff in its own class.
 
@@ -265,10 +270,6 @@ int run()
 
 	// Stopwatch end!
 
-	advd::Videostream vid {};
-
-	std::future<TextureData> future_video_frame;
-
 	bool show_demo = false;
 
 	bool show_debug = true;
@@ -277,28 +278,11 @@ int run()
 
 	bool running = true;
 
-	ConfiguratorWidget configurator;
-	bool config_closed = true;
-
 	while (running)
 	{	
 		ImGui_ImplSdlGL3_NewFrame(window.sdl_window());
 		
-		if (vid.is_open() && !future_video_frame.valid())
-		{
-			future_video_frame = std::async(std::launch::async, [&] {return vid.current_frame();});
-		}
-
-		if (future_video_frame.valid() && future_video_frame.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
-		{
-			auto a = future_video_frame.get();
-			current_frame = Texture::from_data(a.data, {a.w, a.h}, 3);
-
-			if (vid.is_open())
-			{
-				future_video_frame = std::async(std::launch::async, [&] {return vid.current_frame();});
-			}
-		}
+		video_interface.update();
 
 		auto const [window_w, window_h] = window.size();
 
@@ -314,16 +298,8 @@ int run()
 				switch (event.key.keysym.sym)
 				{
 					case SDLK_ESCAPE:
-						switch (configurator.state)
-						{
-							case ConfiguratorWidget::State::root:
-								config_closed = !config_closed;
-								if (!config_closed) ImGui::OpenPopup("###configurator");
-							break;
-							default:
-								configurator.go_back();
-							break;
-						}
+						if (selector.is_open()) selector.cancel();
+						else selector.open();
 					break;
 
 					case SDLK_KP_ENTER:
@@ -344,23 +320,6 @@ int run()
 				}
 			}
 		}
-
-		// TODO - this is insanity - relocate to own class as member variables
-		// TODO - find better solution for caching previous values.
-		static std::vector<advd::StreamRef> videostream_refs;
-		static std::string videostream_ref_id = "";
-		static int videostream_ref_index = -1;
-		static auto last_id = videostream_ref_id;
-		static auto last_index = videostream_ref_index;
-
-		static std::vector<serial::PortInfo> portinfo;
-		static int port_index = -1;
-		static auto last_port_index = port_index;
-
-		static int joystick_index = -1;
-		static auto tentative_joystick_index = joystick_index;
-
-		// TODO - this is insanity - transfer to own class as 
 
 		key_now = std::chrono::high_resolution_clock::now();
 		double time = std::chrono::duration_cast<std::chrono::duration<double>>(key_now - key_last).count();
@@ -427,9 +386,10 @@ int run()
 		}
 		else c.moclaw = 0;
 
-		if (joystick_index >= -1)
+		if (joystick_interface.joystick_index >= -1)
 		{
-			SDL_Joystick* joy = SDL_JoystickOpen(joystick_index);
+			// TODO: streamline control flow for joystick interface
+			SDL_Joystick* joy = SDL_JoystickOpen(joystick_interface.joystick_index);
 
 			if (joy)
 			{
@@ -485,7 +445,7 @@ int run()
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2 {0.f, 0.f});
 		ImGui::Begin("Oculus", nullptr, ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 		{
-			if (current_frame) ImGui::Image((ImTextureID)(uintptr_t)current_frame->gl_id(), ImVec2(window_w, window_h), ImVec2(0,0), ImVec2(1,1), ImVec4(255,255,255,255), ImVec4(255,255,255,0));
+			if (video_interface.current_frame) ImGui::Image((ImTextureID)(uintptr_t)video_interface.current_frame->gl_id(), ImVec2(window_w, window_h), ImVec2(0,0), ImVec2(1,1), ImVec4(255,255,255,255), ImVec4(255,255,255,0));
 			else
 			{
 				auto size = ImGui::CalcTextSize("[No Videostream Connected]");
@@ -551,16 +511,17 @@ int run()
 
 			static std::string nextline;
 
+			// TODO: streamline communications interface control flow
 			try
 			{
-				if (prt.isOpen())
+				if (comm_interface.port.isOpen())
 				{
-					prt.write(serialize_data(pin_data));
+					comm_interface.port.write(serialize_data(pin_data));
 				
 					std::string next;
-					for (int i = 0; i < prt.available(); ++i)
+					for (int i = 0; i < comm_interface.port.available(); ++i)
 					{
-						next = prt.read();
+						next = comm_interface.port.read();
 						if (next == "\n")
 						{
 							console.history.push_back(nextline);
@@ -576,9 +537,8 @@ int run()
 			catch (std::exception e)
 			{
 				//is_port_open = false;
-				prt.close();
-				prt.setPort("");
-				port_index = -1;
+				comm_interface.port.close(); // FIXME: has to set port_index to -1 too.
+				comm_interface.port.setPort("");
 			}
 		}
 		ImGui::End();
@@ -589,63 +549,7 @@ int run()
 
 		show_framerate_meter();
 		
-		//TODO this is insanity
-
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowTitleAlign, ImVec2(0.5, 0.5));
-
-		// TODO: don't be wasteful constructing strings every frame. Why would you do this?
-        ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
-		if (ImGui::BeginPopupModal("###configurator", NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar))
-		{
-			if (config_closed) ImGui::CloseCurrentPopup();
-			
-			configurator.run
-			(
-				[&] (std::optional<advd::StreamRef> maybe_stream_ref)
-				{
-					if (future_video_frame.valid())
-					{
-						// Let's get the frame before any invalidation occurs.
-						// TODO - invalidation can occur anyways which makes a black screen (? I think) so we're going to need a little more safety on the videostream side of things. Better fix it before it becomes an issue.
-						future_video_frame.wait(); future_video_frame.get();
-					}
-
-					if (maybe_stream_ref)
-					{
-						vid.open(*maybe_stream_ref);
-					}
-					else
-					{
-						vid.close();
-						current_frame.reset();
-					}
-				},
-				[&] (std::optional<std::string> port_address)
-				{
-					if (port_address)
-					{
-						try
-						{
-							prt.setPort(*port_address);
-							prt.open();
-						}
-						catch (...)
-						{
-							prt.close();
-							prt.setPort("");
-						}
-					}
-					else
-					{
-						prt.close();
-						prt.setPort("");
-					}
-				}
-			);
-
-			ImGui::EndPopup();
-		}
-		ImGui::PopStyleVar();
+		selector.render(&video_interface, &comm_interface, &joystick_interface);
 
 		glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
 		glClear(GL_COLOR_BUFFER_BIT);
