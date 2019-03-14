@@ -43,10 +43,50 @@ extern "C"
 
 #include <future>
 #include <thread>
+#include <queue>
 
 #include <optional>
+#include <string_view>
 
-#include <opencv2/core/mat.hpp>
+#include "chernobot.hpp"
+
+//#include <opencv2/core/mat.hpp>
+
+struct ConsoleWidget
+{
+	std::vector<std::string> history;
+	std::string title;
+	bool should_autoscroll;
+
+	ConsoleWidget (const std::string_view title): title(title), should_autoscroll(true) {}
+
+	void render (bool *p_open)
+	{
+		if (history.size() > 512 + 128) history.erase(history.begin(), history.begin() + 128);
+
+		ImGui::SetNextWindowSize(ImVec2(600,240), ImGuiCond_FirstUseEver);
+        if (ImGui::Begin(this->title.c_str(), p_open))
+		{
+			ImGui::Checkbox("Should Autoscroll", &should_autoscroll);
+			ImGui::BeginChild("Log", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
+			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4,1));
+			{
+				for (auto &i : history)
+				{
+					ImGui::Text("%s", i.c_str());
+				}
+				if (should_autoscroll)
+				{
+					ImGui::SetScrollHere();
+				}
+			}
+			ImGui::PopStyleVar();
+			ImGui::EndChild(); 
+
+		}
+		ImGui::End();
+	}
+};
 
 int run();
 
@@ -63,7 +103,7 @@ void show_framerate_meter()
 	ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, ImVec2(1.f, 0.f));
 	ImGui::SetNextWindowBgAlpha(240.f/255.f); // Transparent background
 	
-	if (ImGui::Begin("framerate_meter", nullptr, ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
+	if (ImGui::Begin("framerate_meter", nullptr, ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
 	{
 		ImGui::Text("%1.f f/s", ImGui::GetIO().Framerate);
 	}
@@ -90,16 +130,16 @@ int run()
 		style.FrameBorderSize= 0.f;
 
 		ImVec4* colors = style.Colors;
-		colors[ImGuiCol_WindowBg]			   = ImVec4(0.10f, 0.10f, 0.12f, 1.00f);
-		colors[ImGuiCol_ChildBg]				= ImVec4(0.08f, 0.08f, 0.09f, 1.00f);
+		colors[ImGuiCol_WindowBg]			   = ImVec4(0.10f, 0.10f, 0.12f, 0.90f);
+		colors[ImGuiCol_ChildBg]				= ImVec4(0.08f, 0.08f, 0.09f, 0.90f);
 		colors[ImGuiCol_Border]				 = ImVec4(0.00f, 0.00f, 0.00f, 1.00f);
-		colors[ImGuiCol_FrameBg]				= ImVec4(0.14f, 0.14f, 0.16f, 1.00f);
-		colors[ImGuiCol_FrameBgHovered]		 = ImVec4(0.16f, 0.16f, 0.19f, 1.00f);
-		colors[ImGuiCol_FrameBgActive]		  = ImVec4(0.19f, 0.19f, 0.25f, 1.00f);
-		colors[ImGuiCol_TitleBg]				= ImVec4(0.08f, 0.08f, 0.09f, 1.00f);
-		colors[ImGuiCol_TitleBgActive]		  = ImVec4(0.08f, 0.08f, 0.09f, 1.00f);
-		colors[ImGuiCol_TitleBgCollapsed]	   = ImVec4(0.08f, 0.08f, 0.09f, 1.00f);
-		colors[ImGuiCol_MenuBarBg]			  = ImVec4(0.08f, 0.08f, 0.09f, 1.00f);
+		colors[ImGuiCol_FrameBg]				= ImVec4(0.14f, 0.14f, 0.16f, 0.90f);
+		colors[ImGuiCol_FrameBgHovered]		 = ImVec4(0.16f, 0.16f, 0.19f, 0.90f);
+		colors[ImGuiCol_FrameBgActive]		  = ImVec4(0.19f, 0.19f, 0.25f, 0.90f);
+		colors[ImGuiCol_TitleBg]				= ImVec4(0.08f, 0.08f, 0.09f, 0.90f);
+		colors[ImGuiCol_TitleBgActive]		  = ImVec4(0.08f, 0.08f, 0.09f, 0.90f);
+		colors[ImGuiCol_TitleBgCollapsed]	   = ImVec4(0.08f, 0.08f, 0.09f, 0.90f);
+		colors[ImGuiCol_MenuBarBg]			  = ImVec4(0.08f, 0.08f, 0.09f, 0.90f);
 		colors[ImGuiCol_ScrollbarBg]			= ImVec4(0.00f, 0.00f, 0.00f, 0.50f);
 		colors[ImGuiCol_CheckMark]			  = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
 		colors[ImGuiCol_ModalWindowDarkening]	   = ImVec4(0.00f, 0.00f, 0.00f, 0.38f);
@@ -115,10 +155,7 @@ int run()
 
 	Controls c;
 
-	int joystick_index = -1;
-
-	int port_index = -1;
-	bool is_port_open = false;
+	// TODO - get this legacy stuff under control.
 
 	int is_lemming = 2;
 	serial::Serial prt("");
@@ -133,7 +170,11 @@ int run()
 
 	bool is_using_bool_elev = true;
 
+	// legacy end!
+
 	std::optional<Texture> current_frame;
+
+	// TODO - get this stopwatch stuff in its own class.
 
 	auto key_last = std::chrono::high_resolution_clock::now();
 	auto key_now = std::chrono::high_resolution_clock::now();
@@ -222,15 +263,26 @@ int run()
 		}
 	};
 
+	// Stopwatch end!
+
 	advd::Videostream vid {};
 
 	std::future<TextureData> future_video_frame;
 
+	bool show_demo = false;
+
 	bool show_debug = true;
 
+	ConsoleWidget console {"Chatter"};
+
 	bool running = true;
+
+	ConfiguratorWidget configurator;
+	bool config_closed = true;
+
 	while (running)
 	{	
+		ImGui_ImplSdlGL3_NewFrame(window.sdl_window());
 		
 		if (vid.is_open() && !future_video_frame.valid())
 		{
@@ -248,11 +300,9 @@ int run()
 			}
 		}
 
-		/*
-		INPUT CALCULATION AND STUFF
-		*/
-
 		auto const [window_w, window_h] = window.size();
+
+		// TODO - this is insanity. Transfer to its own class, and make this the update() function.
 
 		SDL_Event event;
 		while (SDL_PollEvent(&event))
@@ -260,9 +310,57 @@ int run()
 			ImGui_ImplSdlGL3_ProcessEvent(&event);
 			if (event.type == SDL_QUIT) running = false;
 			else if (event.type == SDL_KEYDOWN && event.key.repeat == 0)
-			{}
+			{
+				switch (event.key.keysym.sym)
+				{
+					case SDLK_ESCAPE:
+						switch (configurator.state)
+						{
+							case ConfiguratorWidget::State::root:
+								config_closed = !config_closed;
+								if (!config_closed) ImGui::OpenPopup("###configurator");
+							break;
+							default:
+								configurator.go_back();
+							break;
+						}
+					break;
+
+					case SDLK_KP_ENTER:
+					case SDLK_RETURN:
+					case SDLK_RETURN2:
+						// TODO: trigger configurator 'confirm' event.
+					break;
+
+					case SDLK_v:
+						// TODO: get configurator to open subsections on demand.
+					break;
+					case SDLK_c:
+						// TODO: get configurator to open subsections on demand.
+					break;
+					case SDLK_b:
+						// TODO: get configurator to open subsections on demand.
+					break;
+				}
+			}
 		}
-		ImGui_ImplSdlGL3_NewFrame(window.sdl_window());
+
+		// TODO - this is insanity - relocate to own class as member variables
+		// TODO - find better solution for caching previous values.
+		static std::vector<advd::StreamRef> videostream_refs;
+		static std::string videostream_ref_id = "";
+		static int videostream_ref_index = -1;
+		static auto last_id = videostream_ref_id;
+		static auto last_index = videostream_ref_index;
+
+		static std::vector<serial::PortInfo> portinfo;
+		static int port_index = -1;
+		static auto last_port_index = port_index;
+
+		static int joystick_index = -1;
+		static auto tentative_joystick_index = joystick_index;
+
+		// TODO - this is insanity - transfer to own class as 
 
 		key_now = std::chrono::high_resolution_clock::now();
 		double time = std::chrono::duration_cast<std::chrono::duration<double>>(key_now - key_last).count();
@@ -382,12 +480,10 @@ int run()
 
 		key_last = std::chrono::high_resolution_clock::now();
 
-		std::vector<serial::PortInfo> portinfo = serial::list_ports();
-
 		ImGui::SetNextWindowSize(ImVec2(window_w, window_h), ImGuiSetCond_Always);
 		ImGui::SetNextWindowPos(ImVec2(0.f, 0.f), ImGuiSetCond_Always);
 		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2 {0.f, 0.f});
-		ImGui::Begin("Oculus", nullptr, ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+		ImGui::Begin("Oculus", nullptr, ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 		{
 			if (current_frame) ImGui::Image((ImTextureID)(uintptr_t)current_frame->gl_id(), ImVec2(window_w, window_h), ImVec2(0,0), ImVec2(1,1), ImVec4(255,255,255,255), ImVec4(255,255,255,0));
 			else
@@ -402,94 +498,22 @@ int run()
 		ImGui::End();
 		ImGui::PopStyleVar();
 
+		if (show_demo) ImGui::ShowDemoWindow();
+
 		if (show_debug) ImGui::SetNextWindowSize(ImVec2(window_w/2, window_h), ImGuiSetCond_Always);
 		ImGui::SetNextWindowPos(ImVec2(0.f, 0.f), ImGuiSetCond_Always);
 		ImGui::SetNextWindowBgAlpha(240.f/255.f); // Transparent background
 		ImGui::Begin("Pilot Console", nullptr, (!show_debug? ImGuiWindowFlags_AlwaysAutoResize : 0) | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 		{
+			if (ImGui::Button("Show Debug Menu")) show_debug = !show_debug; 
+
+			if (!show_debug)
 			{
-				static std::vector<advd::StreamRef> videostream_refs;
-				static std::string videostream_ref_id = "";
-				static int videostream_ref_index = -1;
-				static auto last_id = videostream_ref_id;
-				static auto last_index = videostream_ref_index;
-				if (ImGui::Button("Show Debug Menu")) show_debug = !show_debug; 
-
-				if (!show_debug)
-				{
-					ImGui::End();
-					goto pilot_console_end;
-				}
-
-				if (ImGui::Button("Configure Videostream..")) 
-				{
-					ImGui::OpenPopup("Videostream Options");
-
-					videostream_refs = advd::StreamRef::enumerate();
-					videostream_ref_index = -1;
-					for (int i = 0; i < videostream_refs.size(); ++i)
-					{
-						if (videostream_refs[i].id() == videostream_ref_id) videostream_ref_index = i; 
-					}
-				}
-
-				if (ImGui::BeginPopupModal("Videostream Options", NULL, ImGuiWindowFlags_AlwaysAutoResize))
-				{
-					ImGui::ListBoxHeader("Videostream", videostream_refs.size() + 1);
-						if (ImGui::Selectable("<none>", videostream_ref_index == -1)) {videostream_ref_index = -1; videostream_ref_id = "";};
-						for (int i = 0; i < videostream_refs.size(); ++i) if (ImGui::Selectable(videostream_refs[i].label().c_str(), videostream_ref_index == i)) {videostream_ref_index = i; videostream_ref_id = videostream_refs[i].id();};
-					ImGui::ListBoxFooter();
-
-					if (ImGui::Button("Finish"))
-					{
-						ImGui::CloseCurrentPopup();
-
-						if (last_id != videostream_ref_id)
-						{
-							if (future_video_frame.valid())
-							{
-								// Let's get the frame before any invalidation occurs.
-								future_video_frame.wait(); future_video_frame.get();
-							}
-
-							if (videostream_ref_index != -1)
-							{
-								vid.open(videostream_refs[videostream_ref_index]);
-							}
-							else
-							{
-								vid.close();
-								current_frame.reset();
-							}
-
-							last_id = videostream_ref_id;
-							last_index = videostream_ref_index; // TODO - last_index likely unnecessary
-						}
-					}
-					ImGui::SameLine();
-					if (ImGui::Button("Cancel"))
-					{
-						ImGui::CloseCurrentPopup();
-
-						videostream_ref_id = last_id;
-						videostream_ref_index = last_index;
-					}
-
-					ImGui::EndPopup();
-				}
+				ImGui::End();
+				goto pilot_console_end;
 			}
-
-			if (port_index >= portinfo.size()) port_index = -1;
-			ImGui::ListBoxHeader("Slave", portinfo.size() + 1);
-			if (ImGui::Selectable("<none>", port_index == -1)) port_index = -1;
-			for (int i = 0; i < portinfo.size(); ++i) if (ImGui::Selectable(portinfo[i].port.c_str(), port_index == i)) port_index = i;
-			ImGui::ListBoxFooter();
-
-			if (joystick_index >= SDL_NumJoysticks()) joystick_index = -1;
-			ImGui::ListBoxHeader("Joystick", SDL_NumJoysticks() + 1);
-			if (ImGui::Selectable("<none>", joystick_index == -1)) joystick_index = -1;
-			for (int i = 0; i < SDL_NumJoysticks(); ++i) if (ImGui::Selectable(SDL_JoystickNameForIndex(i), joystick_index == i)) joystick_index = i;
-			ImGui::ListBoxFooter();
+			
+			if (ImGui::Button("DEBUG ONLY SHOW DEMO")) show_demo = !show_demo;
 
 			ImGui::RadioButton("Saw", &is_lemming, 0); ImGui::SameLine();
 			ImGui::RadioButton("Romulus", &is_lemming, 2);
@@ -525,29 +549,33 @@ int run()
 			SERIAL COMMUNICATION
 			*/
 
+			static std::string nextline;
+
 			try
 			{
-				if (port_index != -1)
+				if (prt.isOpen())
 				{
-					if (!is_port_open)
+					prt.write(serialize_data(pin_data));
+				
+					std::string next;
+					for (int i = 0; i < prt.available(); ++i)
 					{
-						is_port_open = true;
-						prt.setPort(portinfo[port_index].port);
-						prt.open();
+						next = prt.read();
+						if (next == "\n")
+						{
+							console.history.push_back(nextline);
+							nextline = "";
+						}
+						else
+						{
+							nextline += next;
+						}
 					}
-
-					if (prt.isOpen()) prt.write(serialize_data(pin_data));
-				}
-				else
-				{
-					is_port_open = false;
-					prt.close();
-					prt.setPort("");
 				}
 			}
 			catch (std::exception e)
 			{
-				is_port_open = false;
+				//is_port_open = false;
 				prt.close();
 				prt.setPort("");
 				port_index = -1;
@@ -556,9 +584,69 @@ int run()
 		ImGui::End();
 
 		pilot_console_end:
+		
+		console.render(nullptr);
 
 		show_framerate_meter();
 		
+		//TODO this is insanity
+
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowTitleAlign, ImVec2(0.5, 0.5));
+
+		// TODO: don't be wasteful constructing strings every frame. Why would you do this?
+        ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+		if (ImGui::BeginPopupModal("###configurator", NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar))
+		{
+			if (config_closed) ImGui::CloseCurrentPopup();
+			
+			configurator.run
+			(
+				[&] (std::optional<advd::StreamRef> maybe_stream_ref)
+				{
+					if (future_video_frame.valid())
+					{
+						// Let's get the frame before any invalidation occurs.
+						// TODO - invalidation can occur anyways which makes a black screen (? I think) so we're going to need a little more safety on the videostream side of things. Better fix it before it becomes an issue.
+						future_video_frame.wait(); future_video_frame.get();
+					}
+
+					if (maybe_stream_ref)
+					{
+						vid.open(*maybe_stream_ref);
+					}
+					else
+					{
+						vid.close();
+						current_frame.reset();
+					}
+				},
+				[&] (std::optional<std::string> port_address)
+				{
+					if (port_address)
+					{
+						try
+						{
+							prt.setPort(*port_address);
+							prt.open();
+						}
+						catch (...)
+						{
+							prt.close();
+							prt.setPort("");
+						}
+					}
+					else
+					{
+						prt.close();
+						prt.setPort("");
+					}
+				}
+			);
+
+			ImGui::EndPopup();
+		}
+		ImGui::PopStyleVar();
+
 		glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
 		glClear(GL_COLOR_BUFFER_BIT);
 		ImGui::Render();

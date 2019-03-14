@@ -108,6 +108,24 @@ void serialize_controls(std::array<std::uint16_t, 12>& pin_data, const Controls&
 std::string serialize_data (std::array<std::uint16_t, 12> pin_data)
 {
 	std::string serialized_data = "";
+	for (size_t i = 0; i < pin_data.size(); ++i)
+	{
+		serialized_data += std::to_string(i);
+		serialized_data.push_back(':');
+		serialized_data += std::to_string(pin_data[i]);
+		serialized_data.push_back(';');
+	}
+	return serialized_data;
+}
+
+#if 0
+/*
+	Space efficient protocol results in significant losses of data.
+*/
+
+std::string serialize_data (std::array<std::uint16_t, 12> pin_data)
+{
+	std::string serialized_data = "";
 	serialized_data.push_back((std::uint8_t) 255);
 
 	for (auto i : pin_data) 
@@ -118,3 +136,4 @@ std::string serialize_data (std::array<std::uint16_t, 12> pin_data)
 	
 	return serialized_data;
 }
+#endif
