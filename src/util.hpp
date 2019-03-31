@@ -56,6 +56,8 @@ public:
 
 	SDL_Window *sdl_window () {return m_sdl_window;}
 
+	SDL_GLContext *gl_context () {return &m_gl_context;}
+
 	std::tuple<int, int> size ()
 	{
 		int w, h;
@@ -78,19 +80,19 @@ class Texture
 	int m_w;
 	int m_h;
 
-	enum {owned, unowned, none} m_state;
+	enum {owned, none} m_state;
 	
-	Texture (GLuint gl_id, int w, int h, bool is_owned): m_gl_id(gl_id), m_w(w), m_h(h), m_state(is_owned? owned : unowned) {}
+	Texture (GLuint gl_id, int w, int h): m_gl_id(gl_id), m_w(w), m_h(h), m_state(owned) {}
 
 public:
 
 	Texture (): m_gl_id(0), m_w(0), m_h(0), m_state(none) {}
 
-	Texture (Texture const &texture): m_gl_id(texture.m_gl_id), m_w(texture.m_w), m_h(texture.m_h), m_state(unowned) {}
-	Texture (Texture &&texture): m_gl_id(texture.m_gl_id), m_w(texture.m_w), m_h(texture.m_h), m_state(owned) {texture.m_state = unowned;}
+	Texture (Texture const &texture) = delete;
+	Texture (Texture &&texture): m_gl_id(texture.m_gl_id), m_w(texture.m_w), m_h(texture.m_h), m_state(owned) {texture.m_state = none;}
 
-	Texture &operator= (Texture const &texture) {if (m_state == owned) glDeleteTextures(1, &m_gl_id);m_gl_id = texture.m_gl_id; m_w = texture.m_w; m_h = texture.m_h; m_state = unowned; return *this;}
-	Texture &operator= (Texture &&texture) {if (m_state == owned) glDeleteTextures(1, &m_gl_id); texture.m_state = unowned; m_gl_id = texture.m_gl_id; m_w = texture.m_w; m_h = texture.m_h; m_state = owned; return *this;}
+	Texture &operator= (Texture const &texture) = delete;
+	Texture &operator= (Texture &&texture) {if (m_state == owned) glDeleteTextures(1, &m_gl_id); texture.m_state = none; m_gl_id = texture.m_gl_id; m_w = texture.m_w; m_h = texture.m_h; m_state = owned; return *this;}
 
 	static tl::expected<Texture, std::string> from_path (std::string const &path)
 	{
@@ -111,7 +113,7 @@ public:
 
 		stbi_image_free(image);
 
-		return {Texture{gl_id, w, h, owned}};
+		return {Texture{gl_id, w, h}};
 	}
 	
 	static Texture from_data (unsigned char const *const data, std::tuple<int, int> const size, int const channels)
@@ -129,7 +131,7 @@ public:
 		glTexImage2D(GL_TEXTURE_2D, 0, channels == 3? GL_RGB : GL_RGBA , w, h, 0, channels == 1? GL_RED : channels == 2? GL_RG : channels == 3? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, (void*) data);
 		
 		glBindTexture(GL_TEXTURE_2D, last_id);
-		return {Texture{gl_id, w, h, owned}};
+		return {Texture{gl_id, w, h}};
 	}
 
 	~Texture ()

@@ -13,6 +13,7 @@
 
 class VideoInterface
 {
+public: // TODO: temporarily made public.
 	// Cached values from the previous frame.
 	std::vector<advd::StreamRef> videostream_refs;
 	std::string videostream_ref_id = "";
@@ -29,10 +30,12 @@ class VideoInterface
 		std::function<bool()> confirm;
 	};
 
+	std::vector<std::shared_ptr<Texture>> snapped_frames;
+
 	advd::Videostream videostream;
 	std::future<TextureData> future_frame;
-public: // TODO: temporarily made public.
-	std::optional<Texture> current_frame;
+
+	std::shared_ptr<Texture> current_frame;
 
 public:
 	Configurator make_configurator()
@@ -99,12 +102,17 @@ public:
 		if (future_frame.valid() && future_frame.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
 		{
 			auto a = future_frame.get();
-			current_frame = Texture::from_data(a.data, {a.w, a.h}, 3);
+			current_frame = std::make_shared<Texture>(Texture::from_data(a.data, {a.w, a.h}, 3));
 
 			if (videostream.is_open())
 			{
 				future_frame = std::async(std::launch::async, [&] {return videostream.current_frame();});
 			}
 		}
+	}
+
+	void snap_frame ()
+	{
+		if (current_frame) snapped_frames.push_back(current_frame);
 	}
 };

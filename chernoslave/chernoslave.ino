@@ -3,12 +3,10 @@
 
 enum class ParserState
 {
-  awaiting_command,
-  awaiting_unary_data,
-
-  awaiting_line_end,
-  awaiting_line,
-}
+  awaiting,
+  awaiting_pin,
+  awaiting_data,
+};
 
 Servo s[12];
 
@@ -18,32 +16,84 @@ void setup ()
 	{
 		s[i].attach(i+2); // pins 0 and 1 reserved for serial communication.
 	}
-	Serial.begin(115200);
+	Serial.begin(38400);
 }
 
-ParserState state = ParserState::ready_for_line,
+String line = "";
+int index = 0;
+
 void loop()
 {
-  switch (state)
+  String str = Serial.readStringUntil('\x17');
+  Serial.println(str);
+
+  ParserState state = ParserState::awaiting;
+  int pin = -1;
+  int left = 3;
+  int data = 0;
+  
+  for (int i = 0; i < str.length(); ++i)
   {
-    case ParserState::awaiting_command:
-    break;
-    case ParserState::awaiting_unary_data:
-    break;
-    case ParserState::awaiting_line_end:
-      while (Serial.available())
+    switch (state)
+    {
+      case ParserState::awaiting:
       {
-        if (Serial.read() == ';')
+        char p = str.charAt(i);
+        if (p == '(')
         {
-          state = ParserState::awaiting_line;
+          state = ParserState::awaiting_pin;
+          left = 3;
+          data = 0;
+          ++i;
+        }
+      }
+      break;
+      case ParserState::awaiting_pin:
+      {
+        char p = str.charAt(i);
+        if (p >= '0' && p <= '9') pin = p - '0';
+        else if (p == 'A' || p == 'B') pin = p - 'A' + 10;
+        else
+        {
+          state = ParserState::awaiting;
+          break; 
+        }
+        state = ParserState::awaiting_data;
+        ++i;
+      }
+      break;
+      case ParserState::awaiting_data:
+      {
+        char p = str.charAt(i);
+        if (p >= '0' && p <= '9')
+        {
+          data *= 10;
+          data += p - '0';
+          --left;
+          ++i;
+        }
+        else
+        {
+          state = ParserState::awaiting;
+          break; 
+        }
+        if (left == 0)
+        {
+          s[pin].writeMicroseconds(1100 + data);
+          state = ParserState::awaiting;
           break;
         }
       }
-    break;
-    case ParserState::awaiting_line:
-      
-    break;
+      break;
+    }
   }
+
+  fail:
+
+  //STOP PARSING
+  
+  Serial.print('\x17');
+  //Serial.flush();//TODO: read for \n then send the '\n' signal back.
 }
 
 /*

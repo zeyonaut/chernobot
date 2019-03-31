@@ -57,7 +57,7 @@ void serialize_controls(std::array<std::uint16_t, 12>& pin_data, const Controls&
 {
 	using std::clamp;
 
-	pin_data.fill(1500);
+	pin_data.fill(400);
 	if (botflag == 0) // Saw
 	{
 		int fleft = magnitude(c.right, c.forward, fleft_motor) + c.clockwise;
@@ -95,13 +95,13 @@ void serialize_controls(std::array<std::uint16_t, 12>& pin_data, const Controls&
 		lmotor = clamp(-400, lmotor, 400);
 		umotor = clamp(-400, umotor, 400);
 
-		pin_data[0] = 1500 + rmotor; // 6 1 //right motor
-		pin_data[1] = 1500 + lmotor; // 7 2 //left motor
+		pin_data[0] = 400 + rmotor; // 6 1 //right motor
+		pin_data[1] = 400 + lmotor; // 7 2 //left motor
 
-		pin_data[2] = 1500 + umotor; // 2 4
-		pin_data[3] = 1500 + umotor; // 4 5
+		pin_data[2] = 400 + umotor; // 2 4
+		pin_data[3] = 400 + umotor; // 4 5
 
-		pin_data[4] = 1500 + c.moclaw;
+		pin_data[4] = 400 + c.moclaw;
 	}
 }
 
@@ -110,11 +110,14 @@ std::string serialize_data (std::array<std::uint16_t, 12> pin_data)
 	std::string serialized_data = "";
 	for (size_t i = 0; i < pin_data.size(); ++i)
 	{
-		serialized_data += std::to_string(i);
-		serialized_data.push_back(':');
+		//serialized_data += std::to_string(i);
+		serialized_data += "(";
+		serialized_data.push_back((char)(i < 10? i + '0' : (i - 10) + 'A'));
 		serialized_data += std::to_string(pin_data[i]);
-		serialized_data.push_back(';');
+		serialized_data += ")";
 	}
+	std::cout << serialized_data << '\n';
+
 	return serialized_data;
 }
 

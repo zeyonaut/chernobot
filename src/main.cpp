@@ -8,7 +8,8 @@
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_keycode.h>
 
-#include "util/imgui_impl_sdl_gl3.h"
+#include "examples/imgui_impl_sdl.h"
+#include "examples/imgui_impl_opengl3.h"
 
 #include <vector>
 #include <exception>
@@ -54,43 +55,7 @@ extern "C"
 #include "comm_interface.hpp"
 #include "joystick_interface.hpp"
 
-//#include <opencv2/core/mat.hpp>
-
-struct ConsoleWidget
-{
-	std::vector<std::string> history;
-	std::string title;
-	bool should_autoscroll;
-
-	ConsoleWidget (const std::string_view title): title(title), should_autoscroll(true) {}
-
-	void render (bool *p_open)
-	{
-		if (history.size() > 512 + 128) history.erase(history.begin(), history.begin() + 128);
-
-		ImGui::SetNextWindowSize(ImVec2(600,240), ImGuiCond_FirstUseEver);
-        if (ImGui::Begin(this->title.c_str(), p_open))
-		{
-			ImGui::Checkbox("Should Autoscroll", &should_autoscroll);
-			ImGui::BeginChild("Log", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
-			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4,1));
-			{
-				for (auto &i : history)
-				{
-					ImGui::Text("%s", i.c_str());
-				}
-				if (should_autoscroll)
-				{
-					ImGui::SetScrollHere();
-				}
-			}
-			ImGui::PopStyleVar();
-			ImGui::EndChild(); 
-
-		}
-		ImGui::End();
-	}
-};
+#include <opencv2/core/mat.hpp>
 
 int run();
 
@@ -114,9 +79,15 @@ void show_framerate_meter()
 	ImGui::End();
 }
 
+enum class Event
+{
+	toggle_configurator_selector,
+	take_snapshot,
+};
+
 int run()
 {
-	ConfiguratorSelector<VideoInterface, CommInterface, JoystickInterface> selector;
+	ConfiguratorSelector<VideoInterface, CommInterface, JoystickInterface> selector {"stuf###configurator"};
 	VideoInterface video_interface;
 	CommInterface comm_interface;
 	JoystickInterface joystick_interface;
@@ -128,8 +99,11 @@ int run()
 	Window window;
 
 	{
+		IMGUI_CHECKVERSION();
 		ImGui::CreateContext();
-		ImGui_ImplSdlGL3_Init(window.sdl_window());
+		//ImGui_ImplSdlGL3_Init(window.sdl_window());
+		ImGui_ImplSDL2_InitForOpenGL(window.sdl_window(), window.gl_context());
+    	ImGui_ImplOpenGL3_Init("#version 150");
 
 		ImGui::StyleColorsDark();
 		ImGuiStyle& style = ImGui::GetStyle();
@@ -155,7 +129,8 @@ int run()
 
 		fin += []()
 		{
-			ImGui_ImplSdlGL3_Shutdown();
+			ImGui_ImplOpenGL3_Shutdown();
+    		ImGui_ImplSDL2_Shutdown();
 			ImGui::DestroyContext();
 		};
 	}
@@ -251,7 +226,7 @@ int run()
 
 		ImGui::NewLine();
 
-		for(int i = 1; i <= 5 ; i++)
+		for (int i = 1; i <= 5 ; i++)
 		{
 			if (lapped_seconds.size() + 1 > i)
 			{
@@ -261,7 +236,7 @@ int run()
 
 		if (lapped_seconds.size() <= 5)
 		{
-			for(int i = 0; i < 5 - lapped_seconds.size(); i++)
+			for (int i = 0; i < 5 - lapped_seconds.size(); i++)
 			{
 				ImGui::NewLine();
 			}
@@ -278,28 +253,20 @@ int run()
 
 	bool running = true;
 
-	while (running)
-	{	
-		ImGui_ImplSdlGL3_NewFrame(window.sdl_window());
-		
-		video_interface.update();
+	for (std::vector<Event> events; running;)
+	{
+		events.clear();
 
-		auto const [window_w, window_h] = window.size();
-
-		// TODO - this is insanity. Transfer to its own class, and make this the update() function.
-
-		SDL_Event event;
-		while (SDL_PollEvent(&event))
+		for (SDL_Event event; SDL_PollEvent(&event);)
 		{
-			ImGui_ImplSdlGL3_ProcessEvent(&event);
+			ImGui_ImplSDL2_ProcessEvent(&event);
 			if (event.type == SDL_QUIT) running = false;
 			else if (event.type == SDL_KEYDOWN && event.key.repeat == 0)
 			{
 				switch (event.key.keysym.sym)
 				{
 					case SDLK_ESCAPE:
-						if (selector.is_open()) selector.cancel();
-						else selector.open();
+						events.push_back(Event::toggle_configurator_selector);
 					break;
 
 					case SDLK_KP_ENTER:
@@ -309,6 +276,7 @@ int run()
 					break;
 
 					case SDLK_v:
+						events.push_back(Event::take_snapshot);
 						// TODO: get configurator to open subsections on demand.
 					break;
 					case SDLK_c:
@@ -321,11 +289,37 @@ int run()
 			}
 		}
 
+		ImGui_ImplOpenGL3_NewFrame();
+		ImGui_ImplSDL2_NewFrame(window.sdl_window());
+		ImGui::NewFrame();
+
+		for (auto event: events)
+		{
+			switch (event)
+			{
+				case Event::toggle_configurator_selector:
+				{
+					if (selector.is_open()) selector.cancel();
+					else selector.open();
+				}
+				break;
+				case Event::take_snapshot:
+				{
+					video_interface.snap_frame();
+				}
+				break;
+			}
+		}
+		
+		video_interface.update();
+
+		auto const [window_w, window_h] = window.size();
+
 		key_now = std::chrono::high_resolution_clock::now();
 		double time = std::chrono::duration_cast<std::chrono::duration<double>>(key_now - key_last).count();
 		const Uint8* currentKeyStates = SDL_GetKeyboardState(NULL);
 
-		int mdz = 4; // Motor deadzone magnitude -- currently, the dead band appears to be around 4 times the intended magnitude. Please fix.
+		int mdz = 4;
 		if (currentKeyStates[SDL_SCANCODE_W])
 		{
 			if (c.forward < mdz) c.forward = mdz; 
@@ -475,6 +469,11 @@ int run()
 			
 			if (ImGui::Button("DEBUG ONLY SHOW DEMO")) show_demo = !show_demo;
 
+			for (auto &t: video_interface.snapped_frames)
+			{
+				ImGui::Image((ImTextureID)(uintptr_t)t->gl_id(), ImVec2(50, 50), ImVec2(0,0), ImVec2(1,1), ImVec4(255,255,255,255), ImVec4(255,255,255,0));
+			}
+
 			ImGui::RadioButton("Saw", &is_lemming, 0); ImGui::SameLine();
 			ImGui::RadioButton("Romulus", &is_lemming, 2);
 
@@ -501,45 +500,10 @@ int run()
 			ImGui::SliderFloat("Clockwise", &c.clockwise, -max, max);
 			ImGui::SliderFloat("ClawOpening", &c.moclaw, -max, max);
 
-			serialize_controls(pin_data, c, is_lemming);
-
 			ImGui::PopItemWidth();
 
-			/*
-			SERIAL COMMUNICATION
-			*/
-
-			static std::string nextline;
-
-			// TODO: streamline communications interface control flow
-			try
-			{
-				if (comm_interface.port.isOpen())
-				{
-					comm_interface.port.write(serialize_data(pin_data));
-				
-					std::string next;
-					for (int i = 0; i < comm_interface.port.available(); ++i)
-					{
-						next = comm_interface.port.read();
-						if (next == "\n")
-						{
-							console.history.push_back(nextline);
-							nextline = "";
-						}
-						else
-						{
-							nextline += next;
-						}
-					}
-				}
-			}
-			catch (std::exception e)
-			{
-				//is_port_open = false;
-				comm_interface.port.close(); // FIXME: has to set port_index to -1 too.
-				comm_interface.port.setPort("");
-			}
+			serialize_controls(pin_data, c, is_lemming);
+			comm_interface.update(&console, pin_data);
 		}
 		ImGui::End();
 
@@ -554,7 +518,7 @@ int run()
 		glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
 		glClear(GL_COLOR_BUFFER_BIT);
 		ImGui::Render();
-		ImGui_ImplSdlGL3_RenderDrawData(ImGui::GetDrawData());
+		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());
 
 		window.update();
 	}

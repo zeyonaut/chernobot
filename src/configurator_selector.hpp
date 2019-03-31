@@ -21,7 +21,7 @@ template <typename ...Ts> class ConfiguratorSelector
 	struct Closed {};
 	struct Root {};
 	
-	std::variant<Closed, Root, Configurator<Ts> ...> configurator;
+	std::variant<Closed, Root, Configurator<Ts>...> configurator;
 
 	template <typename T> void render_options (T *t)
 	{
@@ -32,16 +32,20 @@ template <typename ...Ts> class ConfiguratorSelector
 		render_options<T>(t);
 		if constexpr (sizeof...(Args) > 0)
 		{
-			render_options<Args ...>(args ...);
+			render_options<Args...>(args...);
 		}
 	}
 
+	char const *imgui_id;
+
 public:
+	ConfiguratorSelector (char const *imgui_id): imgui_id(imgui_id) {}
+
 	void open ()
 	{
 		if (!is_open())
 		{
-			ImGui::OpenPopup("###configurator");
+			ImGui::OpenPopup(imgui_id);
 
 			configurator = Root{};
 		}
@@ -61,6 +65,11 @@ public:
 	{
 		return !std::holds_alternative<Closed>(configurator);
 	}
+
+	template <typename T> void has ()
+	{
+		return !std::holds_alternative<T>(configurator);
+	}
 	
 	template <typename T> void init (T *configurable)
 	{
@@ -75,7 +84,7 @@ public:
 	{
 		ImGui::SetNextWindowPos(ImVec2(ImGui::GetIO().DisplaySize.x * 0.5f, ImGui::GetIO().DisplaySize.y * 0.5f), ImGuiCond_Always, ImVec2(0.5f, 0.5f));
 		// TODO: allow customizing the ID? Maybe find another way of generating IDs?
-		if (ImGui::BeginPopupModal("###configurator", NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar))
+		if (ImGui::BeginPopupModal(imgui_id, NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoTitleBar))
 		{
 			std::visit
 			(
@@ -85,7 +94,7 @@ public:
 					
 					if constexpr (std::is_same_v<T, Root>)
 					{
-						render_options<Ts ...>(ts ...);
+						render_options<Ts...>(ts...);
 					}
 					else if constexpr (!std::is_same_v<T, Closed>)
 					{

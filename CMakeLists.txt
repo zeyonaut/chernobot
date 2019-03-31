@@ -147,11 +147,13 @@ find_library( SWSCALE_LIBRARY
   /mingw
 )
 
+add_definitions(-DIMGUI_IMPL_OPENGL_LOADER_GLAD)
 
 file(GLOB_RECURSE chernobot_SRC "src/*.cpp")
 target_sources(chernobot PUBLIC ${chernobot_SRC})
 file(GLOB Imgui_SRC "ext/imgui/*.cpp")
 target_sources(chernobot PUBLIC ${Imgui_SRC})
+target_sources(chernobot PUBLIC "ext/imgui/examples/imgui_impl_sdl.cpp" "ext/imgui/examples/imgui_impl_opengl3.cpp")
 file(GLOB_RECURSE Serial_SRC "ext/serial/src/*.cc")
 target_sources(chernobot PUBLIC ${Serial_SRC})
 file(GLOB_RECURSE Qfs_SRC "ext/qfs-cpp/*.cpp")
