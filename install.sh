@@ -15,10 +15,10 @@ if [[ "$OSTYPE" == "darwin" ]]; then
     xcode-select --version > /dev/null || echo -e 'XCode command line tools does not seem to be installed\nIf you would like to install it, run this command\nxcode-select install\nthen rerun this script. Warning: This will take a very long time to install.\n' && exit 1
 
     # Check if Homebrew is installed
-    brew --version > /dev/null || echo -e 'Homebrew is not installed\nIf you would like to install it, run this command\n/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"\nthen rerun this script.\n' && exit 1
+    type brew > /dev/null || echo -e 'Homebrew is not installed\nIf you would like to install it, run this command\n/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"\nthen rerun this script.\n' && exit 1
 
     # Check if git is avaliable
-    git --version > /dev/null || echo -e 'Git is not installed\nIf you would like to install it, run this command\nbrew install git\nthen rerun this script.\n' && exit 1
+    type git > /dev/null || echo -e 'Git is not installed\nIf you would like to install it, run this command\nbrew install git\nthen rerun this script.\n' && exit 1
 
     if [[ "$1" == "dl" ]] || [[ "$1" == "download" ]]; then
         git clone --recursive https://github.com/hyperum/chernobot.git chernobot
