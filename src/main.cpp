@@ -33,11 +33,7 @@ extern "C"
 #include <libswscale/swscale.h>
 }
 
-#include "util/fin.h"
-
 #include "util.hpp"
-
-#include "macros.hpp"
 
 #include "advd/streamref.hpp"
 #include "advd/videostream.hpp"
@@ -87,9 +83,7 @@ enum class UIEvent
 };
 
 int run()
-{
-	Fin fin;
-	
+{	
 	avdevice_register_all();
 
 	Window window;
@@ -122,13 +116,6 @@ int run()
 		colors[ImGuiCol_ScrollbarBg]			= ImVec4(0.00f, 0.00f, 0.00f, 0.50f);
 		colors[ImGuiCol_CheckMark]			  = ImVec4(1.00f, 1.00f, 1.00f, 1.00f);
 		colors[ImGuiCol_ModalWindowDarkening]	   = ImVec4(0.00f, 0.00f, 0.00f, 0.38f);
-
-		fin += []()
-		{
-			ImGui_ImplOpenGL3_Shutdown();
-    		ImGui_ImplSDL2_Shutdown();
-			ImGui::DestroyContext();
-		};
 	}
 
 	std::array<uint16_t, 12> pin_data;
@@ -492,6 +479,10 @@ int run()
 
 		window.update();
 	}
+
+	ImGui_ImplOpenGL3_Shutdown();
+	ImGui_ImplSDL2_Shutdown();
+	ImGui::DestroyContext();
 
 	return 0;
 }
