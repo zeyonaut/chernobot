@@ -57,6 +57,8 @@ extern "C"
 
 #include <opencv2/core/mat.hpp>
 
+#include "oculus.hpp"
+
 int run();
 
 int main (int, char**) try {return run();} catch (...) {throw;} // Force the stack to unwind on an uncaught exception.
@@ -70,28 +72,22 @@ void show_framerate_meter()
 	ImVec2 window_pos = ImVec2(io.DisplaySize.x - distance, distance);
 		
 	ImGui::SetNextWindowPos(window_pos, ImGuiCond_Always, ImVec2(1.f, 0.f));
-	ImGui::SetNextWindowBgAlpha(240.f/255.f); // Transparent background
+	ImGui::SetNextWindowBgAlpha(128.f/255.f); // Transparent background
 	
-	if (ImGui::Begin("framerate_meter", nullptr, ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
+	if (ImGui::Begin("framerate_meter", nullptr, ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
 	{
-		ImGui::Text("%1.f f/s", ImGui::GetIO().Framerate);
+		ImGui::Text("ESC/Configure | TAB/Analyze | %1.f f/s", io.Framerate);
 	}
 	ImGui::End();
 }
 
-enum class Event
+enum class UIEvent
 {
 	toggle_configurator_selector,
-	take_snapshot,
 };
 
 int run()
 {
-	ConfiguratorSelector<VideoInterface, CommInterface, JoystickInterface> selector {"stuf###configurator"};
-	VideoInterface video_interface;
-	CommInterface comm_interface;
-	JoystickInterface joystick_interface;
-
 	Fin fin;
 	
 	avdevice_register_all();
@@ -139,7 +135,7 @@ int run()
 
 	Controls c;
 
-	// TODO - get this legacy stuff under control.
+	// TODO: get this legacy stuff under control.
 
 	int is_lemming = 2;
 
@@ -154,7 +150,7 @@ int run()
 
 	// legacy end!
 
-	// TODO - get this stopwatch stuff in its own class.
+	// TODO: get this stopwatch stuff in its own class.
 
 	auto key_last = std::chrono::high_resolution_clock::now();
 	auto key_now = std::chrono::high_resolution_clock::now();
@@ -166,7 +162,7 @@ int run()
 	std::vector<int> lapped_seconds;
 	bool lap_state_previous = false;
 
-	auto update_imgui_stopwatch = [&]
+	auto const update_imgui_stopwatch = [&]
 	{
 		bool stopwatch_state = ImGui::Button("Stopwatch");
 		ImGui::SameLine();
@@ -179,7 +175,8 @@ int run()
 			lapped_seconds.clear();
 		}
 		ImGui::SameLine();
-		int current_stopwatch;
+		//	TODO: When in own class, make not static.
+		static int current_stopwatch;
 		if (!clock_state)
 		{
 			if (stopwatch_state && !clock_state_previous)
@@ -246,14 +243,18 @@ int run()
 	// Stopwatch end!
 
 	bool show_demo = false;
+	bool show_debug = false;
+	
+	ConfiguratorSelector<VideoInterface, CommInterface, JoystickInterface> selector{"###configurator"};
+	VideoInterface video_interface;
+	CommInterface comm_interface;
+	JoystickInterface joystick_interface;
+	ConsoleWidget console{"Chatter"};
+	Oculus oculus{"###oculus"};
 
-	bool show_debug = true;
+	std::vector<UIEvent> events;
 
-	ConsoleWidget console {"Chatter"};
-
-	bool running = true;
-
-	for (std::vector<Event> events; running;)
+	for (bool running = true; running;)
 	{
 		events.clear();
 
@@ -266,7 +267,7 @@ int run()
 				switch (event.key.keysym.sym)
 				{
 					case SDLK_ESCAPE:
-						events.push_back(Event::toggle_configurator_selector);
+						events.push_back(UIEvent::toggle_configurator_selector);
 					break;
 
 					case SDLK_KP_ENTER:
@@ -275,15 +276,16 @@ int run()
 						// TODO: trigger configurator 'confirm' event.
 					break;
 
-					case SDLK_v:
-						events.push_back(Event::take_snapshot);
+					case SDLK_SPACE:
+						oculus.snap_frame(&video_interface);
 						// TODO: get configurator to open subsections on demand.
 					break;
-					case SDLK_c:
-						// TODO: get configurator to open subsections on demand.
+					case SDLK_TAB:
+						if (oculus.state == Oculus::State::present) oculus.state = Oculus::State::past;
+						else if (oculus.state == Oculus::State::past) oculus.state = Oculus::State::present;
 					break;
-					case SDLK_b:
-						// TODO: get configurator to open subsections on demand.
+					case SDLK_d:
+						show_debug = !show_debug;
 					break;
 				}
 			}
@@ -293,19 +295,14 @@ int run()
 		ImGui_ImplSDL2_NewFrame(window.sdl_window());
 		ImGui::NewFrame();
 
-		for (auto event: events)
+		for (auto const event: events)
 		{
 			switch (event)
 			{
-				case Event::toggle_configurator_selector:
+				case UIEvent::toggle_configurator_selector:
 				{
 					if (selector.is_open()) selector.cancel();
 					else selector.open();
-				}
-				break;
-				case Event::take_snapshot:
-				{
-					video_interface.snap_frame();
 				}
 				break;
 			}
@@ -434,88 +431,61 @@ int run()
 
 		key_last = std::chrono::high_resolution_clock::now();
 
-		ImGui::SetNextWindowSize(ImVec2(window_w, window_h), ImGuiSetCond_Always);
-		ImGui::SetNextWindowPos(ImVec2(0.f, 0.f), ImGuiSetCond_Always);
-		ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2 {0.f, 0.f});
-		ImGui::Begin("Oculus", nullptr, ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
-		{
-			if (video_interface.current_frame) ImGui::Image((ImTextureID)(uintptr_t)video_interface.current_frame->gl_id(), ImVec2(window_w, window_h), ImVec2(0,0), ImVec2(1,1), ImVec4(255,255,255,255), ImVec4(255,255,255,0));
-			else
-			{
-				auto size = ImGui::CalcTextSize("[No Videostream Connected]");
-				
-				ImGui::SetCursorPos(ImVec2 {(window_w - size.x) / 2, (window_h - size.y) / 2});
-
-				ImGui::Text("[No Videostream Connected]");
-			}
-		}
-		ImGui::End();
-		ImGui::PopStyleVar();
+		oculus.render(window.size(), &video_interface);
 
 		if (show_demo) ImGui::ShowDemoWindow();
 
-		if (show_debug) ImGui::SetNextWindowSize(ImVec2(window_w/2, window_h), ImGuiSetCond_Always);
-		ImGui::SetNextWindowPos(ImVec2(0.f, 0.f), ImGuiSetCond_Always);
-		ImGui::SetNextWindowBgAlpha(240.f/255.f); // Transparent background
-		ImGui::Begin("Pilot Console", nullptr, (!show_debug? ImGuiWindowFlags_AlwaysAutoResize : 0) | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+		if (show_debug)
 		{
-			if (ImGui::Button("Show Debug Menu")) show_debug = !show_debug; 
+			ImGui::SetNextWindowSize(ImVec2(window_w/2, window_h), ImGuiSetCond_Always);
+			ImGui::SetNextWindowPos(ImVec2(0.f, 0.f), ImGuiSetCond_Always);
+			ImGui::SetNextWindowBgAlpha(240.f/255.f); // Transparent background
+			ImGui::Begin("Pilot Console", nullptr, (!show_debug? ImGuiWindowFlags_AlwaysAutoResize : 0) | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
+			{			
+				if (ImGui::Button("DEBUG ONLY SHOW DEMO")) show_demo = !show_demo;
 
-			if (!show_debug)
-			{
-				ImGui::End();
-				goto pilot_console_end;
-			}
+				ImGui::SameLine();
+
+				ImGui::RadioButton("Saw", &is_lemming, 0); ImGui::SameLine();
+				ImGui::RadioButton("Romulus", &is_lemming, 2);
+
+				ImGui::PushItemWidth(0);
+
+				ImGui::NewLine();
+
+				update_imgui_stopwatch();
+
+				int max = 400;
 			
-			if (ImGui::Button("DEBUG ONLY SHOW DEMO")) show_demo = !show_demo;
+				if (ImGui::RadioButton("Use Trigger Elevation", is_using_bool_elev)) is_using_bool_elev = true; ImGui::SameLine();
+				if (ImGui::RadioButton("Be a Scrub", !is_using_bool_elev)) is_using_bool_elev = false;
 
-			for (auto &t: video_interface.snapped_frames)
-			{
-				ImGui::Image((ImTextureID)(uintptr_t)t->gl_id(), ImVec2(50, 50), ImVec2(0,0), ImVec2(1,1), ImVec4(255,255,255,255), ImVec4(255,255,255,0));
+				c.forward = c.forward > max? max : c.forward < -max? -max : c.forward;
+				c.right = c.right > max? max : c.right < -max? -max : c.right;
+				c.up = c.up > max? max : c.up < -max? -max : c.up;
+				c.clockwise = c.clockwise > max? max : c.clockwise < -max? -max : c.clockwise;
+				c.moclaw = c.moclaw > 15? 15 : c.moclaw < -15? -15 : c.moclaw;
+
+				ImGui::SliderFloat("Forward", &c.forward, -max, max);
+				ImGui::SliderFloat("Right", &c.right, -max, max);
+				ImGui::SliderFloat("Up", &c.up, -max, max);
+				ImGui::SliderFloat("Clockwise", &c.clockwise, -max, max);
+				ImGui::SliderFloat("ClawOpening", &c.moclaw, -max, max);
+
+				ImGui::PopItemWidth();
+
+				serialize_controls(pin_data, c, is_lemming);
+				comm_interface.update(&console, pin_data);
 			}
-
-			ImGui::RadioButton("Saw", &is_lemming, 0); ImGui::SameLine();
-			ImGui::RadioButton("Romulus", &is_lemming, 2);
-
-			ImGui::PushItemWidth(0);
-
-			ImGui::NewLine();
-
-			update_imgui_stopwatch();
-
-			int max = 400;
-		
-			if (ImGui::RadioButton("Use Trigger Elevation", is_using_bool_elev)) is_using_bool_elev = true; ImGui::SameLine();
-			if (ImGui::RadioButton("Be a Scrub", !is_using_bool_elev)) is_using_bool_elev = false;
-
-			c.forward = c.forward > max? max : c.forward < -max? -max : c.forward;
-			c.right = c.right > max? max : c.right < -max? -max : c.right;
-			c.up = c.up > max? max : c.up < -max? -max : c.up;
-			c.clockwise = c.clockwise > max? max : c.clockwise < -max? -max : c.clockwise;
-			c.moclaw = c.moclaw > 15? 15 : c.moclaw < -15? -15 : c.moclaw;
-
-			ImGui::SliderFloat("Forward", &c.forward, -max, max);
-			ImGui::SliderFloat("Right", &c.right, -max, max);
-			ImGui::SliderFloat("Up", &c.up, -max, max);
-			ImGui::SliderFloat("Clockwise", &c.clockwise, -max, max);
-			ImGui::SliderFloat("ClawOpening", &c.moclaw, -max, max);
-
-			ImGui::PopItemWidth();
-
-			serialize_controls(pin_data, c, is_lemming);
-			comm_interface.update(&console, pin_data);
+			ImGui::End();
 		}
-		ImGui::End();
-
-		pilot_console_end:
-		
 		console.render(nullptr);
 
 		show_framerate_meter();
 		
 		selector.render(&video_interface, &comm_interface, &joystick_interface);
 
-		glViewport(0, 0, (int)ImGui::GetIO().DisplaySize.x, (int)ImGui::GetIO().DisplaySize.y);
+		glViewport(0, 0, static_cast<int>(ImGui::GetIO().DisplaySize.x), static_cast<int>(ImGui::GetIO().DisplaySize.y));
 		glClear(GL_COLOR_BUFFER_BIT);
 		ImGui::Render();
 		ImGui_ImplOpenGL3_RenderDrawData(ImGui::GetDrawData());

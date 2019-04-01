@@ -29,9 +29,7 @@ public: // TODO: temporarily made public.
 		std::function<void()> render;
 		std::function<bool()> confirm;
 	};
-
-	std::vector<std::shared_ptr<Texture>> snapped_frames;
-
+	
 	advd::Videostream videostream;
 	std::future<TextureData> future_frame;
 
@@ -109,10 +107,5 @@ public:
 				future_frame = std::async(std::launch::async, [&] {return videostream.current_frame();});
 			}
 		}
-	}
-
-	void snap_frame ()
-	{
-		if (current_frame) snapped_frames.push_back(current_frame);
 	}
 };

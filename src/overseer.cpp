@@ -124,6 +124,7 @@ std::string serialize_data (std::array<std::uint16_t, 12> pin_data)
 #if 0
 /*
 	Space efficient protocol results in significant losses of data.
+	[April 1, 2019] Actually, maybe it doesn't. But it might not be as useful as we think.
 */
 
 std::string serialize_data (std::array<std::uint16_t, 12> pin_data)
