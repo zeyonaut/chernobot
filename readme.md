@@ -6,6 +6,18 @@ A one-size-fits-all program for Singapore American School's MATE program, writte
 
 ### macOS
 
+#### Automatic Script
+
+The following script will automatically check if dependencies are installed, install dependencies from Homebrew, then compile and install Chernobot.
+
+Paste this into a Terminal prompt
+```
+curl -sSL --output chernobotinstaller.sh https://raw.githubusercontent.com/hyperum/chernobot/master/install.sh && grep '#!/bin/bash' chernobotinstaller.sh > /dev/null && bash ./chernobotinstaller.sh dl
+```
+
+
+#### Manual
+
 You'll need the latest version of Clang for C++17, SDL2, Ninja (optional), CMake, and various other tools.
 
 If you haven't already, install the XCode Developer Tools with:
