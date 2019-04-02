@@ -11,12 +11,8 @@ set -e
 if [[ "$OSTYPE" == "darwin" ]]; then
     echo -e 'Detected Darwin (macOS) OS\n'
     
-    # Check if xcode command line tools is installed
-    if xcode-select install 2>&1 | grep installed; then
-        echo -e 'XCode command line tools are installed\n'
-    else
-        echo -e 'XCode command line tools do not seem to be installed. You will be prompted to install it\n'
-    fi
+    # Check if c++ compiler is installed
+    type c++ > /dev/null || echo -e 'There is no C++ compiler avaliable on your computer.\nIf you would like to install one, run this command\nxcode-select --install\nthen rerun this script\n' && exit 1
 
     # Check if Homebrew is installed
     type brew > /dev/null || echo -e 'Homebrew is not installed\nIf you would like to install it, run this command\n/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"\nthen rerun this script.\n' && exit 1
