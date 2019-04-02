@@ -12,7 +12,11 @@ if [[ "$OSTYPE" == "darwin" ]]; then
     echo -e 'Detected Darwin (macOS) OS\n'
     
     # Check if xcode command line tools is installed
-    xcode-select --version > /dev/null || echo -e 'XCode command line tools does not seem to be installed\nIf you would like to install it, run this command\nxcode-select install\nthen rerun this script. Warning: This will take a very long time to install.\n' && exit 1
+    if xcode-select install 2>&1 | grep installed; then
+        echo -e 'XCode command line tools are installed\n'
+    else
+        echo -e 'XCode command line tools do not seem to be installed. You will be prompted to install it\n'
+    fi
 
     # Check if Homebrew is installed
     type brew > /dev/null || echo -e 'Homebrew is not installed\nIf you would like to install it, run this command\n/usr/bin/ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"\nthen rerun this script.\n' && exit 1
@@ -56,11 +60,14 @@ elif [[ "$OSTYPE" == "linux-gnu" ]]; then
     exit 1
     # TODO: Make GNU/Linux install script
 
-    if [ "$(cat /etc/os-release | grep -icP '(ID\_LIKE\=ubuntu|ID=ubuntu)')" != 1 ]; then
+    if [ "$(cat /etc/os-release | grep -icP '(ID_LIKE=ubuntu|ID=ubuntu)')" != 1 ]; then
         echo -e 'Unfortunatly, there is not support for your distro. Currently, only Ubuntu and Ubuntu deriviatives are supported\n'
         exit 1
     fi
     
+    # TODO: Add required OpenCV packages
+    sudo apt update && sudo apt install -y cmake ninja-build libsdl2-dev
+
 else
     echo -e "OS not recognized\n"
 fi

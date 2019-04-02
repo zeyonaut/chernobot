@@ -8,7 +8,7 @@ A one-size-fits-all program for Singapore American School's MATE program, writte
 
 #### Automatic Script
 
-The following script will automatically check if dependencies are installed, install dependencies from Homebrew, then compile and install Chernobot.
+The following script will automatically check if dependencies are installed, prompt to install or automatically install dependencies from Homebrew, then compile and install Chernobot.
 
 Paste this into a Terminal prompt
 ```
