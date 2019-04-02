@@ -21,7 +21,6 @@
 
 #include "overseer.h"
 
-#include <chrono>
 #include <cmath>
 extern "C"
 {
@@ -50,6 +49,7 @@ extern "C"
 #include "video_interface.hpp"
 #include "comm_interface.hpp"
 #include "joystick_interface.hpp"
+#include "stopwatch_widget.hpp"
 
 #include <opencv2/core/mat.hpp>
 
@@ -72,7 +72,7 @@ void show_framerate_meter()
 	
 	if (ImGui::Begin("framerate_meter", nullptr, ImGuiWindowFlags_Tooltip | ImGuiWindowFlags_NoBringToFrontOnFocus | ImGuiWindowFlags_NoMove | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings | ImGuiWindowFlags_NoFocusOnAppearing | ImGuiWindowFlags_NoNav))
 	{
-		ImGui::Text("ESC/Configure | TAB/Analyze | %1.f f/s", io.Framerate);
+		ImGui::Text("ESC/Configure | BACKTICK/Analyze | %1.f f/s", io.Framerate);
 	}
 	ImGui::End();
 }
@@ -137,97 +137,8 @@ int run()
 
 	// legacy end!
 
-	// TODO: get this stopwatch stuff in its own class.
-
 	auto key_last = std::chrono::high_resolution_clock::now();
 	auto key_now = std::chrono::high_resolution_clock::now();
-
-	bool clock_state = false;
-	bool clock_state_previous = false;
-	auto inital_time = std::chrono::high_resolution_clock::now();
-	auto maintain_time_proper = (std::chrono::high_resolution_clock::now() - std::chrono::high_resolution_clock::now());
-	std::vector<int> lapped_seconds;
-	bool lap_state_previous = false;
-
-	auto const update_imgui_stopwatch = [&]
-	{
-		bool stopwatch_state = ImGui::Button("Stopwatch");
-		ImGui::SameLine();
-		bool lap_state = ImGui::Button("Lap");
-		ImGui::SameLine();
-		if (ImGui::Button("Reset"))
-		{
-			inital_time = std::chrono::high_resolution_clock::now();
-			maintain_time_proper = std::chrono::high_resolution_clock::now() - std::chrono::high_resolution_clock::now();
-			lapped_seconds.clear();
-		}
-		ImGui::SameLine();
-		//	TODO: When in own class, make not static.
-		static int current_stopwatch;
-		if (!clock_state)
-		{
-			if (stopwatch_state && !clock_state_previous)
-			{
-				clock_state_previous = true;
-			}
-			else if (!stopwatch_state && clock_state_previous)
-			{
-				inital_time = std::chrono::high_resolution_clock::now() - maintain_time_proper;
-				clock_state = true;
-				clock_state_previous = false;
-			}
-			ImGui::Text("Stopped");
-		}
-		else
-		{
-			current_stopwatch = ((std::chrono::high_resolution_clock::now() - inital_time).count()) / 1000000000;
-			if (lap_state && !lap_state_previous)
-			{
-				lap_state_previous = true;
-			}
-			else if (!lap_state && lap_state_previous)
-			{
-				lap_state_previous = false;
-				lapped_seconds.push_back(current_stopwatch);
-			}
-
-			if (stopwatch_state && !clock_state_previous)
-			{
-				clock_state_previous = true;
-			}
-			else if (!stopwatch_state && clock_state_previous)
-			{
-				maintain_time_proper = std::chrono::high_resolution_clock::now() - inital_time;
-				clock_state = false;
-				clock_state_previous = false;
-			}
-			ImGui::Text("Running");
-		}
-
-		ImGui::Text("Stopwatch Time: %02d:%02d; Lap: %02d:%02d", ((int)(current_stopwatch)/60),((int)(current_stopwatch)%60), lapped_seconds.size()>0? (current_stopwatch - lapped_seconds[lapped_seconds.size()-1])/60 : current_stopwatch/60, lapped_seconds.size()>0? (current_stopwatch - lapped_seconds[lapped_seconds.size()-1]) % 60 : current_stopwatch % 60);
-
-		// LAP DISPLAY
-
-		ImGui::NewLine();
-
-		for (int i = 1; i <= 5 ; i++)
-		{
-			if (lapped_seconds.size() + 1 > i)
-			{
-				ImGui::Text("Lap Time %02d: %02d:%02d", (int)(lapped_seconds.size() - i + 1),(int)((int)(lapped_seconds[lapped_seconds.size() - i])/60), (int)((int)(lapped_seconds[lapped_seconds.size() - i])%60));
-			}
-		}
-
-		if (lapped_seconds.size() <= 5)
-		{
-			for (int i = 0; i < 5 - lapped_seconds.size(); i++)
-			{
-				ImGui::NewLine();
-			}
-		}
-	};
-
-	// Stopwatch end!
 
 	bool show_demo = false;
 	bool show_debug = false;
@@ -238,6 +149,7 @@ int run()
 	JoystickInterface joystick_interface;
 	ConsoleWidget console{"Chatter"};
 	Oculus oculus{"###oculus"};
+	StopwatchWidget stopwatch_widget{"###stopwatch"};
 
 	std::vector<UIEvent> events;
 
@@ -267,7 +179,7 @@ int run()
 						oculus.snap_frame(&video_interface);
 						// TODO: get configurator to open subsections on demand.
 					break;
-					case SDLK_TAB:
+					case SDLK_BACKQUOTE:
 						if (oculus.state == Oculus::State::present) oculus.state = Oculus::State::past;
 						else if (oculus.state == Oculus::State::past) oculus.state = Oculus::State::present;
 					break;
@@ -426,7 +338,7 @@ int run()
 		{
 			ImGui::SetNextWindowSize(ImVec2(window_w/2, window_h), ImGuiSetCond_Always);
 			ImGui::SetNextWindowPos(ImVec2(0.f, 0.f), ImGuiSetCond_Always);
-			ImGui::SetNextWindowBgAlpha(240.f/255.f); // Transparent background
+			ImGui::SetNextWindowBgAlpha(240.f/255.f);
 			ImGui::Begin("Pilot Console", nullptr, (!show_debug? ImGuiWindowFlags_AlwaysAutoResize : 0) | ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoMove);
 			{			
 				if (ImGui::Button("DEBUG ONLY SHOW DEMO")) show_demo = !show_demo;
@@ -440,7 +352,7 @@ int run()
 
 				ImGui::NewLine();
 
-				update_imgui_stopwatch();
+				stopwatch_widget.render();
 
 				int max = 400;
 			
