@@ -42,7 +42,7 @@ namespace advd
 
 			#if defined (__APPLE__)
 			AVInputFormat *format = av_find_input_format("avfoundation"); // macOS only
-			#elif defined (__LINUX__)
+			#elif defined (__linux__)
 			AVInputFormat *format = av_find_input_format("l4v2"); // Linux
 			#endif
 

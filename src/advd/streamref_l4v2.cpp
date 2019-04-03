@@ -1,3 +1,4 @@
+#if defined (__linux__)
 #include "streamref.hpp"
 
 #include <iostream>
@@ -37,7 +38,7 @@ namespace advd {
                 AVFormatContext* format_context = avformat_alloc_context();
                 AVInputFormat* format = av_find_input_format("l4v2");
                 AVDictionary* dictionary = NULL;
-			    av_dict_set(&dictionary, "framerate", "30", 0);
+                av_dict_set(&dictionary, "framerate", "30", 0);
                 
                 if(avformat_open_input(&format_context, name.c_str(), format, &dictionary) == 0)
                     tr.push_back(StreamRef {name});
@@ -51,3 +52,4 @@ namespace advd {
         
     }
 }
+#endif
