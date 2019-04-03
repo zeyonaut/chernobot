@@ -13,6 +13,7 @@ extern "C"
 #include <libswscale/swscale.h>
 }
 
+
 namespace advd
 {
 	class Videostream
@@ -34,6 +35,9 @@ namespace advd
 
 		void open_unchecked(const StreamRef &stream_ref)
 		{
+
+			avcodec_register_all();
+
 			format_ctx = avformat_alloc_context();
 
 			#if defined (__APPLE__)
@@ -65,7 +69,7 @@ namespace advd
 			codec_ctx = avcodec_alloc_context3(NULL); // TODO free or something
 			assert(avcodec_parameters_to_context(codec_ctx, format_ctx->streams[stream_index]->codecpar) >= 0);
 			
-			AVCodec *codec = avcodec_find_decoder(codec_ctx->codec_id);
+			const AVCodec* codec = avcodec_find_decoder(codec_ctx->codec_id);
 			assert(avcodec_open2(codec_ctx, codec, NULL) >= 0);
 
 			raw_frame = av_frame_alloc();
