@@ -19,7 +19,7 @@
 
 #include <qfs-cpp/qfs.hpp> // qfs doesn't work in linux - use std namespaced strcmp. Also, exe_path doesn't work.
 
-#include "overseer.h"
+#include "overseer.hpp"
 
 #include <cmath>
 extern "C"

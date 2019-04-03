@@ -1,5 +1,7 @@
 #pragma once
 
+#include "overseer.hpp"
+
 class JoystickInterface
 {
 	int tentative_joystick_index;
