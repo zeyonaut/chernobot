@@ -35,8 +35,13 @@ namespace advd
 		void open_unchecked(const StreamRef &stream_ref)
 		{
 			format_ctx = avformat_alloc_context();
+
+			#if defined (__APPLE__)
 			AVInputFormat *format = av_find_input_format("avfoundation"); // macOS only
-		
+			#elif defined (__LINUX__)
+			AVInputFormat *format = av_find_input_format("l4v2"); // Linux
+			#endif
+
 			AVDictionary* dictionary = NULL;
 			av_dict_set(&dictionary, "framerate", "25", 0); // Ad hoc for specific REDGO converter because open_input fails if wrong framerate given on macOS.
 			// TODO: query device options and then give users the option to change them.

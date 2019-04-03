@@ -172,7 +172,7 @@ if(APPLE)
 	target_link_libraries(chernobot ${FOUNDATION_LIBRARY} ${IOKIT_LIBRARY})
 endif()
 if(UNIX AND NOT APPLE)
-    target_link_libraries(chernobot dl)
+    target_link_libraries(chernobot dl stdc++fs)
 endif()
 
 
