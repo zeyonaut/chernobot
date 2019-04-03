@@ -52,17 +52,39 @@ if [[ "$OSTYPE" == "darwin" ]]; then
 elif [[ "$OSTYPE" == "linux-gnu" ]]; then
     echo -e "Detected GNU/Linux OS\n"
 
-    echo -e 'Linux support is not yet avaliable. It will be coming in the future\n'
-    exit 1
-    # TODO: Make GNU/Linux install script
-
     if [ "$(cat /etc/os-release | grep -icP '(ID_LIKE=ubuntu|ID=ubuntu)')" != 1 ]; then
         echo -e 'Unfortunatly, there is not support for your distro. Currently, only Ubuntu and Ubuntu deriviatives are supported\n'
         exit 1
     fi
     
-    # TODO: Add required OpenCV packages
-    sudo apt update && sudo apt install -y cmake ninja-build libsdl2-dev
+    if [[ "$1" == "dl" ]] || [[ "$1" == "download" ]]; then
+        git clone --recursive https://github.com/hyperum/chernobot.git chernobot
+        cd chernobot
+        sudo apt update && sudo apt install -y cmake ninja-build libsdl2-dev opencv*
+        mkdir -p tmp
+        cd tmp
+        cmake -G Ninja ..
+        ninja install
+        cd ..
+    elif [[ "$1" == "update" ]]; then
+        git pull
+        git submodule update --init --recursive
+        mkdir -p tmp
+        cd tmp
+        cmake -G Ninja ..
+        ninja install
+        cd ..
+    else
+        mkdir -p tmp
+        cd tmp
+        cmake -G Ninja ..
+        ninja install
+        cd ..
+    fi
+
+    echo -e 'Chernobot has been installed. You should find a file named "chernobot" in the chernobot folder.'
+
+    exit 0
 
 else
     echo -e "OS not recognized\n"
