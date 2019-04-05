@@ -51,8 +51,6 @@ extern "C"
 #include "joystick_interface.hpp"
 #include "stopwatch_widget.hpp"
 
-#include <opencv2/core/mat.hpp>
-
 #include "oculus.hpp"
 
 int run();
