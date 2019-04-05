@@ -17,8 +17,6 @@
 #include <string> 
 #include <array>
 
-#include <qfs-cpp/qfs.hpp> // qfs doesn't work in linux - use std namespaced strcmp. Also, exe_path doesn't work.
-
 #include "overseer.hpp"
 
 #include <cmath>
