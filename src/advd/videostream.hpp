@@ -13,6 +13,7 @@ extern "C"
 #include <libswscale/swscale.h>
 }
 
+#include <opencv2/imgproc/imgproc.hpp>
 
 namespace advd
 {
@@ -133,7 +134,7 @@ namespace advd
 					if(is_frame_finished)
 					{
 						sws_scale(conv_ctx, raw_frame->data, raw_frame->linesize, 0, codec_ctx->height, converted_frame->data, converted_frame->linesize);
-						auto t = TextureData {codec_ctx->width, codec_ctx->height, (unsigned char *) converted_frame->data[0]}; //TODO - this is not good. You have to copy the data - so find out how large it is in the docs.
+						auto t = TextureData {codec_ctx->width, codec_ctx->height, (unsigned char *) converted_frame->data[0], (size_t) converted_frame->linesize[0]}; //TODO - this is not good. You have to copy the data - so find out how large it is in the docs.
 						av_packet_unref(&current_packet);
 						return t;
 					}

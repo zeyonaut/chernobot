@@ -5,6 +5,8 @@
 
 #include <imgui/imgui.h>
 
+#include <opencv2/core/mat.hpp>
+
 #include "util.hpp"
 #include "video_interface.hpp"
 
@@ -91,7 +93,7 @@ public:
 				// right
 				ImGui::BeginGroup();
 					ImGui::Text("Image ID: %d", frame_selected);
-					ImGui::BeginChild("selected", ImVec2(0, frame_selected != -1? -ImGui::GetFrameHeightWithSpacing() : 0)); // Leave room for 1 line below us
+					ImGui::BeginChild("selected", ImVec2(0, frame_selected != -1? (5 * -ImGui::GetFrameHeightWithSpacing()) : 0)); // Leave room for 1 line below us
 						auto const content_size = ImGui::GetContentRegionAvail();
 
 						auto const frame = frame_selected == -1? video_interface->current_frame : snapped_frames[frame_selected];
@@ -108,6 +110,31 @@ public:
 							ImGui::Image(reinterpret_cast<ImTextureID>(frame->gl_id()), target_size, ImVec2(0,0), ImVec2(1,1), ImVec4(255,255,255,255), ImVec4(255,255,255,0));
 							
 							//TODO: Analyze image here and draw stuff on the screen. - only if 
+
+							if (frame_selected != -1 && !frame->mat()->empty()) //don't kill the framerate lol. We should test it out later though.
+							{
+								//good, we can analyze this frame.
+								int num_squares = 0, num_tris = 0, num_circs = 0, num_lines = 0;
+
+								cv::Mat graymat;
+								cv::cvtColor(*(frame->mat()), graymat, cv::COLOR_RGBA2GRAY);
+
+								cv::Mat binmat;
+								cv::threshold(graymat, binmat, 127, 255, cv::THRESH_BINARY);
+
+								std::vector<std::vector<cv::Point>> contours;
+								cv::findContours(binmat, contours, cv::RETR_LIST, cv::CHAIN_APPROX_TC89_L1);
+
+								std::cout << "Contours: ";
+								for (auto &ci: contours)
+								{
+									std::vector<cv::Point> approx_contour;
+									cv::approxPolyDP(ci, approx_contour, 0.01 * cv::arcLength(ci, true), true);
+									std::cout << approx_contour.size() << ' ';
+									//TODO: this should feed into the result.
+								}
+								std::cout << '\n';
+							}
 						}
 						else
 						{

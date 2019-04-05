@@ -4,6 +4,8 @@
 #include <string_view>
 #include "expected.hpp"
 
+#include <opencv2/core/mat.hpp>
+
 #include <glad/glad.h>
 #include <SDL2/SDL.h>
 #include <SDL2/SDL_keycode.h>
@@ -72,27 +74,30 @@ struct TextureData
 	int w;
 	int h;
 	unsigned char *data;
+	size_t linesize;
 };
 
 class Texture
 {
+	cv::Mat m_mat;
+
 	GLuint m_gl_id;
 	int m_w;
 	int m_h;
 
 	enum {owned, none} m_state;
 	
-	Texture (GLuint gl_id, int w, int h): m_gl_id(gl_id), m_w(w), m_h(h), m_state(owned) {}
+	Texture (GLuint gl_id, int w, int h, cv::Mat mat): m_gl_id(gl_id), m_w(w), m_h(h), m_state(owned), m_mat(mat){}
 
 public:
 
 	Texture (): m_gl_id(0), m_w(0), m_h(0), m_state(none) {}
 
 	Texture (Texture const &texture) = delete;
-	Texture (Texture &&texture): m_gl_id(texture.m_gl_id), m_w(texture.m_w), m_h(texture.m_h), m_state(owned) {texture.m_state = none;}
+	Texture (Texture &&texture): m_gl_id(texture.m_gl_id), m_w(texture.m_w), m_h(texture.m_h), m_state(owned), m_mat(texture.m_mat) {texture.m_state = none;}
 
 	Texture &operator= (Texture const &texture) = delete;
-	Texture &operator= (Texture &&texture) {if (m_state == owned) glDeleteTextures(1, &m_gl_id); texture.m_state = none; m_gl_id = texture.m_gl_id; m_w = texture.m_w; m_h = texture.m_h; m_state = owned; return *this;}
+	Texture &operator= (Texture &&texture) {if (m_state == owned) glDeleteTextures(1, &m_gl_id); texture.m_state = none; m_gl_id = texture.m_gl_id; m_w = texture.m_w; m_h = texture.m_h; m_state = owned; m_mat = texture.m_mat; return *this;}
 
 	static tl::expected<Texture, std::string> from_path (std::string const &path)
 	{
@@ -113,10 +118,10 @@ public:
 
 		stbi_image_free(image);
 
-		return {Texture{gl_id, w, h}};
+		return {Texture{gl_id, w, h, cv::Mat{}}}; // TODO: Do we need to create a mat for this?
 	}
 	
-	static Texture from_data (unsigned char const *const data, std::tuple<int, int> const size, int const channels)
+	static Texture from_data (unsigned char const *const data, std::tuple<int, int> const size, int const channels, size_t const linesize)
 	{
 		GLuint gl_id;
 		glGenTextures(1, &gl_id);
@@ -131,7 +136,8 @@ public:
 		glTexImage2D(GL_TEXTURE_2D, 0, channels == 3? GL_RGB : GL_RGBA , w, h, 0, channels == 1? GL_RED : channels == 2? GL_RG : channels == 3? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, (void*) data);
 		
 		glBindTexture(GL_TEXTURE_2D, last_id);
-		return {Texture{gl_id, w, h}};
+
+		return {Texture{gl_id, w, h, cv::Mat{h, w, channels == 1? CV_8UC1 : channels == 2? CV_8UC2 : channels == 3? CV_8UC3 : CV_8UC4, (void *) data, linesize}}};
 	}
 
 	~Texture ()
@@ -145,7 +151,7 @@ public:
 		return m_gl_id;
 	}
 
-	void reload (unsigned char const *const data, std::tuple<int, int> const size, int const channels)
+	void reload (unsigned char const *const data, std::tuple<int, int> const size, int const channels, size_t const linesize)
 	{
 		if (m_state == owned) glDeleteTextures(1, &m_gl_id);
 
@@ -160,6 +166,8 @@ public:
 		
 		glBindTexture(GL_TEXTURE_2D, last_id);
 		
+		m_mat = cv::Mat(h, w, channels == 1? CV_8UC1 : channels == 2? CV_8UC2 : channels == 3? CV_8UC3 : CV_8UC4, (void *) data, linesize);
+
 		m_state = owned;
 	}
 
@@ -167,5 +175,10 @@ public:
 	{
 		assert(m_state != none);
 		return {m_w, m_h};
+	}
+
+	const cv::Mat *mat ()
+	{
+		return &m_mat;
 	}
 };

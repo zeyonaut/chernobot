@@ -17,8 +17,6 @@
 #include <string> 
 #include <array>
 
-#include <qfs-cpp/qfs.hpp> // qfs doesn't work in linux - use std namespaced strcmp. Also, exe_path doesn't work.
-
 #include "overseer.hpp"
 
 #include <cmath>
@@ -50,8 +48,6 @@ extern "C"
 #include "comm_interface.hpp"
 #include "joystick_interface.hpp"
 #include "stopwatch_widget.hpp"
-
-#include <opencv2/core/mat.hpp>
 
 #include "oculus.hpp"
 
