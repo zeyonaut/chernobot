@@ -6,6 +6,7 @@
 #include <imgui/imgui.h>
 
 #include <opencv2/core/mat.hpp>
+#include <opencv2/highgui.hpp>
 
 #include "util.hpp"
 #include "video_interface.hpp"
@@ -107,17 +108,18 @@ public:
 							auto const target_size = source_ratio > target_ratio? ImVec2(content_size.x, h * content_size.x/w) : ImVec2(w * content_size.y/h, content_size.y);
 							
 							ImGui::SetCursorPos(ImVec2(source_ratio > target_ratio? cursor_pos.x : cursor_pos.x + (content_size.x - target_size.x) / 2, target_ratio > source_ratio? cursor_pos.y : cursor_pos.y + (content_size.y - target_size.y) / 2));
+							auto const origin = ImGui::GetCursorScreenPos();
 							ImGui::Image(reinterpret_cast<ImTextureID>(frame->gl_id()), target_size, ImVec2(0,0), ImVec2(1,1), ImVec4(255,255,255,255), ImVec4(255,255,255,0));
 							
 							//TODO: Analyze image here and draw stuff on the screen. - only if 
 
-							if (frame_selected != -1 && !frame->mat()->empty()) //don't kill the framerate lol. We should test it out later though.
+							if (!frame->mat()->empty()) //don't kill the framerate lol. We should test it out later though.
 							{
 								//good, we can analyze this frame.
 								int num_squares = 0, num_tris = 0, num_circs = 0, num_lines = 0;
 
 								cv::Mat graymat;
-								cv::cvtColor(*(frame->mat()), graymat, cv::COLOR_RGBA2GRAY);
+								cv::cvtColor(*(frame->mat()), graymat, cv::COLOR_RGB2GRAY);
 
 								cv::Mat binmat;
 								cv::threshold(graymat, binmat, 127, 255, cv::THRESH_BINARY);
@@ -125,14 +127,44 @@ public:
 								std::vector<std::vector<cv::Point>> contours;
 								cv::findContours(binmat, contours, cv::RETR_LIST, cv::CHAIN_APPROX_TC89_L1);
 
-								std::cout << "Contours: ";
+
+								cv::Mat drawmat;
+								cv::cvtColor(binmat, drawmat, cv::COLOR_GRAY2BGR);
+								//FIXME: uh oh. There is some pointer black magic going on with the cv frame mat, which affects the opengl mat.
+								cv::drawContours(drawmat, contours, -1, cv::Scalar(255, 255, 0), 8);
+
+								cv::imshow("cvdebug", drawmat);
+
+								auto draw_list = ImGui::GetWindowDrawList();
+
+									draw_list->PushClipRect(origin, ImVec2(origin.x + target_size.x, origin.y + target_size.y), false);
+
+								int i = 0;
 								for (auto &ci: contours)
 								{
+									if (i > 16) break;
 									std::vector<cv::Point> approx_contour;
 									cv::approxPolyDP(ci, approx_contour, 0.01 * cv::arcLength(ci, true), true);
 									std::cout << approx_contour.size() << ' ';
+									if (approx_contour.size() < 2) continue;
+
+									for (int i = 0; i < approx_contour.size(); ++i)
+									{
+										//std::cout << approx_contour << ' ';
+										draw_list->AddLine
+										(
+											ImVec2(origin.x + approx_contour[i].x, origin.y + approx_contour[i].y),
+											ImVec2(origin.x + approx_contour[(i + 1) % approx_contour.size()].x, origin.y + approx_contour[(i + 1) % approx_contour.size()].y),
+											ImColor(0, 255, 0, 255),
+											8
+										);
+
+									}
+
 									//TODO: this should feed into the result.
+									++i;
 								}
+									draw_list->PopClipRect();
 								std::cout << '\n';
 							}
 						}

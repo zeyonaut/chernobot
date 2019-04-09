@@ -24,10 +24,10 @@ namespace advd
 		AVFormatContext *format_ctx;
 		int stream_index;
 
-		AVFrame *raw_frame, *converted_frame;
+		AVFrame *raw_frame, *converted_frame, *cv_converted_frame;
 
 		AVCodecContext *codec_ctx;
-		SwsContext *conv_ctx;
+		SwsContext *conv_ctx, *cv_conv_ctx; //opengl and opencv
 		int frame_bytes; // Some of these three are probably unnecessary and can be made local. Do an investigation later.
 		unsigned char *frame_buffer;
 
@@ -75,17 +75,24 @@ namespace advd
 
 			raw_frame = av_frame_alloc();
 			converted_frame = av_frame_alloc();
+			cv_converted_frame = av_frame_alloc();
 
 			frame_bytes = avpicture_get_size(AV_PIX_FMT_RGB24, codec_ctx->width, codec_ctx->height);
 			frame_buffer = (unsigned char *) malloc(frame_bytes * sizeof(unsigned char));
 
 			avpicture_fill((AVPicture *) converted_frame, frame_buffer, AV_PIX_FMT_RGB24, codec_ctx->width, codec_ctx->height);
+			avpicture_fill((AVPicture *) cv_converted_frame, frame_buffer, AV_PIX_FMT_BGR24, codec_ctx->width, codec_ctx->height);
 			
 			conv_ctx = sws_getContext(codec_ctx->width,
 			codec_ctx->height, codec_ctx->pix_fmt, codec_ctx->width,
 			codec_ctx->height, AV_PIX_FMT_RGB24, SWS_BICUBIC, NULL,
 			NULL, NULL);
 			assert(conv_ctx != NULL);
+			cv_conv_ctx = sws_getContext(codec_ctx->width,
+			codec_ctx->height, codec_ctx->pix_fmt, codec_ctx->width,
+			codec_ctx->height, AV_PIX_FMT_BGR24, SWS_BICUBIC, NULL,
+			NULL, NULL);
+			assert(cv_conv_ctx != NULL);
 		}
 
 	public:
@@ -134,7 +141,15 @@ namespace advd
 					if(is_frame_finished)
 					{
 						sws_scale(conv_ctx, raw_frame->data, raw_frame->linesize, 0, codec_ctx->height, converted_frame->data, converted_frame->linesize);
-						auto t = TextureData {codec_ctx->width, codec_ctx->height, (unsigned char *) converted_frame->data[0], (size_t) converted_frame->linesize[0]}; //TODO - this is not good. You have to copy the data - so find out how large it is in the docs.
+						//sws_scale(cv_conv_ctx, raw_frame->data, raw_frame->linesize, 0, codec_ctx->height, cv_converted_frame->data, cv_converted_frame->linesize);
+						auto t = TextureData
+						{
+							{codec_ctx->width, codec_ctx->height},
+							(unsigned char *) converted_frame->data[0],
+							(size_t) converted_frame->linesize[0],
+							(unsigned char *) converted_frame->data[0], //FIXME: it should be cv_converted_frame &c. However, it looks like the second sws_scale modifies the gl texture data. whoops! Figure this out before reverting.
+							(size_t) converted_frame->linesize[0],
+						}; //TODO - this is not good. You have to copy the data - so find out how large it is in the docs.
 						av_packet_unref(&current_packet);
 						return t;
 					}

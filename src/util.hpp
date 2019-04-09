@@ -71,10 +71,11 @@ public:
 
 struct TextureData
 {
-	int w;
-	int h;
-	unsigned char *data;
+	std::tuple<int, int> size;
+	unsigned char *gl_data;
 	size_t linesize;
+	unsigned char *cv_data;
+	size_t cv_linesize;
 };
 
 class Texture
@@ -121,8 +122,10 @@ public:
 		return {Texture{gl_id, w, h, cv::Mat{}}}; // TODO: Do we need to create a mat for this?
 	}
 	
-	static Texture from_data (unsigned char const *const data, std::tuple<int, int> const size, int const channels, size_t const linesize)
+	static Texture from_data (TextureData const &texture_data)
 	{
+		auto const channels = 3; //FIXME: get channel
+
 		GLuint gl_id;
 		glGenTextures(1, &gl_id);
 		GLint last_id;
@@ -131,13 +134,14 @@ public:
 		glBindTexture(GL_TEXTURE_2D, gl_id);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		auto const [w, h] = size;
+		auto const [w, h] = texture_data.size;
 
-		glTexImage2D(GL_TEXTURE_2D, 0, channels == 3? GL_RGB : GL_RGBA , w, h, 0, channels == 1? GL_RED : channels == 2? GL_RG : channels == 3? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, (void*) data);
+		glTexImage2D(GL_TEXTURE_2D, 0, channels == 3? GL_RGB : GL_RGBA , w, h, 0, channels == 1? GL_RED : channels == 2? GL_RG : channels == 3? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, (void*) texture_data.gl_data);
 		
 		glBindTexture(GL_TEXTURE_2D, last_id);
 
-		return {Texture{gl_id, w, h, cv::Mat{h, w, channels == 1? CV_8UC1 : channels == 2? CV_8UC2 : channels == 3? CV_8UC3 : CV_8UC4, (void *) data, linesize}}};
+		return {Texture{gl_id, w, h,
+			cv::Mat{h, w, channels == 1? CV_8UC1 : channels == 2? CV_8UC2 : channels == 3? CV_8UC3 : CV_8UC4, (void *) texture_data.cv_data, texture_data.cv_linesize}}};
 	}
 
 	~Texture ()
@@ -151,8 +155,10 @@ public:
 		return m_gl_id;
 	}
 
-	void reload (unsigned char const *const data, std::tuple<int, int> const size, int const channels, size_t const linesize)
+	void reload (TextureData const &texture_data)
 	{
+		auto const channels = 3; //FIXME: get channel
+
 		if (m_state == owned) glDeleteTextures(1, &m_gl_id);
 
 		GLint last_id;
@@ -161,12 +167,12 @@ public:
 		glBindTexture(GL_TEXTURE_2D, m_gl_id);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);
 		glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);
-		auto const [w, h] = size;
-		glTexImage2D(GL_TEXTURE_2D, 0, channels == 3? GL_RGB : GL_RGBA , w, h, 0, channels == 1? GL_RED : channels == 2? GL_RG : channels == 3? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, (void*) data);
+		auto const [w, h] = texture_data.size;
+		glTexImage2D(GL_TEXTURE_2D, 0, channels == 3? GL_RGB : GL_RGBA , w, h, 0, channels == 1? GL_RED : channels == 2? GL_RG : channels == 3? GL_RGB : GL_RGBA, GL_UNSIGNED_BYTE, (void*) texture_data.gl_data);
 		
 		glBindTexture(GL_TEXTURE_2D, last_id);
 		
-		m_mat = cv::Mat(h, w, channels == 1? CV_8UC1 : channels == 2? CV_8UC2 : channels == 3? CV_8UC3 : CV_8UC4, (void *) data, linesize);
+		m_mat = cv::Mat(h, w, channels == 1? CV_8UC1 : channels == 2? CV_8UC2 : channels == 3? CV_8UC3 : CV_8UC4, (void *) texture_data.cv_data, texture_data.cv_linesize);
 
 		m_state = owned;
 	}

@@ -50,6 +50,7 @@ extern "C"
 #include "stopwatch_widget.hpp"
 
 #include "oculus.hpp"
+#include <opencv2/highgui.hpp>
 
 int run();
 
@@ -81,6 +82,8 @@ enum class UIEvent
 int run()
 {	
 	avdevice_register_all();
+
+	cv::namedWindow( "cvdebug", cv::WINDOW_AUTOSIZE );
 
 	Window window;
 

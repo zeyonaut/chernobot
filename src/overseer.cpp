@@ -98,8 +98,8 @@ void serialize_controls(std::array<std::uint16_t, 12>& pin_data, const Controls&
 		pin_data[0] = 400 + rmotor; // 6 1 //right motor
 		pin_data[1] = 400 + lmotor; // 7 2 //left motor
 
-		pin_data[2] = 400 + umotor; // 2 4
-		pin_data[3] = 400 + umotor; // 4 5
+		pin_data[2] = 400 + umotor; // 2 4 // 4 is forward elevation
+		pin_data[3] = 400 + umotor; // 4 5 // 5 is rear elevation
 
 		pin_data[4] = 400 + c.moclaw;
 	}

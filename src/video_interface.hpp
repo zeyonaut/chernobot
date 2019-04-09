@@ -100,7 +100,7 @@ public:
 		if (future_frame.valid() && future_frame.wait_for(std::chrono::milliseconds(0)) == std::future_status::ready)
 		{
 			auto a = future_frame.get();
-			current_frame = std::make_shared<Texture>(Texture::from_data(a.data, {a.w, a.h}, 3, a.linesize));
+			current_frame = std::make_shared<Texture>(Texture::from_data(a));
 
 			if (videostream.is_open())
 			{
