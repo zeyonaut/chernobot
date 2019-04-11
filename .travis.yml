@@ -1,0 +1,35 @@
+language: cpp
+sudo: required
+matrix:
+  - os: linux
+    dist: xenial
+    before_install:
+      - sudo apt-get update
+      - sudo apt-get install -y cmake ninja-build libsdl2-dev opencv*
+    addons:
+      apt:
+        sources:
+          - ubuntu-toolchain-r-test
+        packages:
+         - g++-7.3
+    env:
+      - MATRIX_EVAL="CC=gcc-7.3 && CXX=g++-7.3"
+  - os: osx
+    osx_image: xcode10
+    addons:
+      homebrew:
+        packages:
+          - sdl2
+          - ninja
+          - cmake
+          - opencv
+        update: true
+install:
+  - mkdir -p tmp
+  - cd tmp
+  - cmake -G Ninja ..
+  - cd ..
+script:
+  - cd tmp
+  - ninja install
+  - cd ..
