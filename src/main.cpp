@@ -215,36 +215,36 @@ int run()
 		const Uint8* currentKeyStates = SDL_GetKeyboardState(NULL);
 
 		int mdz = 4;
-		if (currentKeyStates[SDL_SCANCODE_W])
+		if (currentKeyStates[SDL_SCANCODE_I])
 		{
 			if (c.forward < mdz) c.forward = mdz; 
 			c.forward += (acceleration * time);
 		}
-		else if (currentKeyStates[SDL_SCANCODE_S])
+		else if (currentKeyStates[SDL_SCANCODE_K])
 		{
 			if (c.forward > -mdz) c.forward = -mdz; 
 			c.forward -= (acceleration * time);
 		}
 		else c.forward = 0;
 
-		if (currentKeyStates[SDL_SCANCODE_A])
+		if (currentKeyStates[SDL_SCANCODE_J])
 		{
 			if (c.right > -mdz) c.right = -mdz; 
 			c.right -= (acceleration * time);
 		}
-		else if (currentKeyStates[SDL_SCANCODE_D])
+		else if (currentKeyStates[SDL_SCANCODE_L])
 		{
 			if (c.right < mdz) c.right = mdz; 
 			c.right += (acceleration * time);
 		}
 		else c.right = 0;
 
-		if (currentKeyStates[SDL_SCANCODE_I])
+		if (currentKeyStates[SDL_SCANCODE_W])
 		{
 			if (c.up < mdz) c.up = mdz; 
 			c.up += (acceleration * time);
 		}
-		else if (currentKeyStates[SDL_SCANCODE_K])
+		else if (currentKeyStates[SDL_SCANCODE_S])
 		{
 			if (c.up > -mdz) c.up = -mdz; 
 			c.up -= (acceleration * time);

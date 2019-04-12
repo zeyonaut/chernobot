@@ -24,6 +24,8 @@ int index = 0;
 
 void loop()
 {
+  /*for (int i = 0; i < 12; ++i)
+  s[i].writeMicroseconds(1500);*/
   String str = Serial.readStringUntil('\x17');
   Serial.println(str);
 
@@ -44,22 +46,21 @@ void loop()
           state = ParserState::awaiting_pin;
           left = 3;
           data = 0;
-          ++i;
         }
       }
       break;
       case ParserState::awaiting_pin:
       {
         char p = str.charAt(i);
+        Serial.print(p);
         if (p >= '0' && p <= '9') pin = p - '0';
         else if (p == 'A' || p == 'B') pin = p - 'A' + 10;
         else
         {
           state = ParserState::awaiting;
-          break; 
+          goto fail;
         }
         state = ParserState::awaiting_data;
-        ++i;
       }
       break;
       case ParserState::awaiting_data:
@@ -70,18 +71,17 @@ void loop()
           data *= 10;
           data += p - '0';
           --left;
-          ++i;
         }
         else
         {
           state = ParserState::awaiting;
-          break; 
+          goto fail;
         }
         if (left == 0)
         {
           s[pin].writeMicroseconds(1100 + data);
+          Serial.print(1100 + data);
           state = ParserState::awaiting;
-          break;
         }
       }
       break;

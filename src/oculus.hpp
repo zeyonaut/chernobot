@@ -131,7 +131,7 @@ public:
 								cv::Mat drawmat;
 								cv::cvtColor(binmat, drawmat, cv::COLOR_GRAY2BGR);
 								//FIXME: uh oh. There is some pointer black magic going on with the cv frame mat, which affects the opengl mat.
-								cv::drawContours(drawmat, contours, -1, cv::Scalar(255, 255, 0), 8);
+								cv::drawContours(drawmat, contours, -1, cv::Scalar(255, 255, 0), -1);
 
 								cv::imshow("cvdebug", drawmat);
 
