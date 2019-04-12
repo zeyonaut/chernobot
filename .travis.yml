@@ -1,35 +1,76 @@
 language: cpp
 sudo: required
 matrix:
-  - os: linux
-    dist: xenial
-    before_install:
-      - sudo apt-get update
-      - sudo apt-get install -y cmake ninja-build libsdl2-dev opencv*
-    addons:
-      apt:
-        sources:
-          - ubuntu-toolchain-r-test
-        packages:
-         - g++-7.3
-    env:
-      - MATRIX_EVAL="CC=gcc-7.3 && CXX=g++-7.3"
-  - os: osx
-    osx_image: xcode10
-    addons:
-      homebrew:
-        packages:
-          - sdl2
-          - ninja
+  include:
+    - dist: xenial
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+            - sourceline: 'ppa:jonathonf/ffmpeg-3'
+          packages:
+          - g++-7
           - cmake
-          - opencv
-        update: true
+          - ninja-build
+          - libsdl2-dev
+          - libavutil-dev
+          - libavdevice-dev
+          - ffmpeg
+          - build-essential
+          - libgtk2.0-dev
+          - pkg-config
+          - libavcodec-dev
+          - libavformat-dev
+          - libswscale-dev
+          - libtbb2
+          - libtbb-dev
+          - libjpeg-dev
+          - libpng-dev
+          - libtiff-dev
+          - libjasper-dev
+          - libdc1394-22-dev
+          - libv4l-dev
+          - libxvidcore-dev
+          - libx264-dev
+          - unzip
+          - libjpeg8-dev
+          - libtiff5-dev
+          - libpng12-dev
+          - libgtk-3-dev
+          - libatlas-base-dev
+          update: true
+      before_install:
+        - wget https://github.com/opencv/opencv/archive/3.4.0.zip -O opencv-3.4.0.zip
+        - wget https://github.com/opencv/opencv_contrib/archive/3.4.0.zip -O opencv_contrib-3.4.0.zip
+        - unzip -q opencv-3.4.0.zip
+        - unzip -q opencv_contrib-3.4.0.zip
+        - cd opencv-3.4.0
+        - mkdir build
+        - cd build
+        - cmake -DCMAKE_BUILD_TYPE=Release -DCMAKE_INSTALL_PREFIX=/usr/local -DOPENCV_EXTRA_MODULES_PATH=../../opencv_contrib-3.4.0/modules -DOPENCV_ENABLE_NONFREE=True ..
+        - make
+        - sudo make install
+        - sudo ldconfig
+        - cd ../..
+      env:
+        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7"
+    - os: osx
+      osx_image: xcode10.2
+      addons:
+        homebrew:
+          packages:
+            - sdl2
+            - ninja
+            - cmake
+            - opencv
+          update: true
 install:
+  eval "${MATRIX_EVAL}"
+script:
+  - PROJECT_ROOT=pwd
+  - cat CMakeLists.txt
   - mkdir -p tmp
   - cd tmp
   - cmake -G Ninja ..
-  - cd ..
-script:
-  - cd tmp
   - ninja install
   - cd ..
