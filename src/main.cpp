@@ -371,12 +371,13 @@ int run()
 				ImGui::SliderFloat("ClawOpening", &c.moclaw, -max, max);
 
 				ImGui::PopItemWidth();
-
-				serialize_controls(pin_data, c, is_lemming);
-				comm_interface.update(&console, pin_data);
 			}
 			ImGui::End();
 		}
+
+		serialize_controls(pin_data, c, is_lemming);
+		comm_interface.update(&console, pin_data);
+
 		console.render(nullptr);
 
 		show_framerate_meter();
