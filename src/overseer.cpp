@@ -118,7 +118,6 @@ std::string serialize_data (std::array<std::uint16_t, 12> pin_data)
 		serialized_data += std::to_string(pin_data[i]);
 		serialized_data += ")";
 	}
-	std::cout << serialized_data << '\n';
 
 	return serialized_data;
 }
