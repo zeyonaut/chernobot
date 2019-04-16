@@ -251,15 +251,13 @@ int run()
 		}
 		else c.up = 0;
 
-		if (currentKeyStates[SDL_SCANCODE_J])
+		if (currentKeyStates[SDL_SCANCODE_U])
 		{
-			if (c.clockwise > -mdz) c.clockwise = -mdz; 
-			c.clockwise -= (acceleration * time);
+			c.clockwise = 100;
 		}
-		else if (currentKeyStates[SDL_SCANCODE_L])
+		else if (currentKeyStates[SDL_SCANCODE_O])
 		{
-			if (c.clockwise < mdz) c.clockwise = mdz; 
-			c.clockwise += (acceleration * time);
+			c.clockwise = -100;
 		}
 		else c.clockwise = 0;
 
