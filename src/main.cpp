@@ -261,17 +261,16 @@ int run()
 		}
 		else c.clockwise = 0;
 
-		if (currentKeyStates[SDL_SCANCODE_U])
+		if (currentKeyStates[SDL_SCANCODE_Y])
 		{
-			if (c.moclaw > 0) c.moclaw = 0; 
-			c.moclaw -= (acceleration * time * 0.5);
+			if (c.moclaw < mdz) c.moclaw = mdz; 
+			c.moclaw += (acceleration * time);
 		}
-		else if (currentKeyStates[SDL_SCANCODE_O])
+		else if (currentKeyStates[SDL_SCANCODE_H])
 		{
-			if (c.moclaw < 0) c.moclaw = 0; 
-			c.moclaw += (acceleration * time * 0.5);
+			if (c.moclaw > -mdz) c.moclaw = -mdz; 
+			c.moclaw -= (acceleration * time);
 		}
-		else c.moclaw = 0;
 
 		if (joystick_interface.joystick_index >= -1)
 		{
@@ -360,13 +359,13 @@ int run()
 				c.right = c.right > max? max : c.right < -max? -max : c.right;
 				c.up = c.up > max? max : c.up < -max? -max : c.up;
 				c.clockwise = c.clockwise > max? max : c.clockwise < -max? -max : c.clockwise;
-				c.moclaw = c.moclaw > 15? 15 : c.moclaw < -15? -15 : c.moclaw;
+				c.moclaw = c.moclaw > max? max : c.moclaw < -max? -max : c.moclaw;
 
 				ImGui::SliderFloat("Forward", &c.forward, -max, max);
-				ImGui::SliderFloat("Right", &c.right, -max, max);
+				ImGui::SliderFloat("Clockright", &c.right, -max, max);
 				ImGui::SliderFloat("Up", &c.up, -max, max);
-				ImGui::SliderFloat("Clockwise", &c.clockwise, -max, max);
-				ImGui::SliderFloat("ClawOpening", &c.moclaw, -max, max);
+				ImGui::SliderFloat("Gripper", &c.clockwise, -max, max);
+				ImGui::SliderFloat("Pitch", &c.moclaw, -max, max);
 
 				ImGui::PopItemWidth();
 			}
