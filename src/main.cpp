@@ -14,8 +14,10 @@
 #include <vector>
 #include <exception>
 #include <iostream>
-#include <string> 
+#include <string>
+#include <cstring>
 #include <array>
+#include <map>
 
 #include "overseer.hpp"
 
@@ -47,6 +49,7 @@ extern "C"
 #include "video_interface.hpp"
 #include "comm_interface.hpp"
 #include "joystick_interface.hpp"
+#include "joystick_setup_interface.hpp"
 #include "stopwatch_widget.hpp"
 
 #include "oculus.hpp"
@@ -142,10 +145,11 @@ int run()
 	bool show_demo = false;
 	bool show_debug = false;
 	
-	ConfiguratorSelector<VideoInterface, CommInterface, JoystickInterface> selector{"###configurator"};
+	ConfiguratorSelector<VideoInterface, CommInterface, JoystickInterface, JoystickSetupInterface> selector{"###configurator"};
 	VideoInterface video_interface;
 	CommInterface comm_interface;
 	JoystickInterface joystick_interface;
+	JoystickSetupInterface joy_use;
 	ConsoleWidget console{"Chatter"};
 	Oculus oculus{"###oculus"};
 	StopwatchWidget stopwatch_widget{"###stopwatch"};
@@ -275,17 +279,25 @@ int run()
 		if (joystick_interface.joystick_index >= -1)
 		{
 			// TODO: streamline control flow for joystick interface
-			SDL_Joystick* joy = SDL_JoystickOpen(joystick_interface.joystick_index);
+			// SDL_Joystick* joy = SDL_JoystickOpen(joystick_interface.joystick_index);
+			joy_use.open_joystick(joystick_interface.joystick_index);
+			SDL_Joystick* joy = joy_use.sdl_joystick();
+			joy_use.setup_mappings(5);
+			
 
 			if (joy)
 			{
 				if (SDL_JoystickNumAxes(joy) > 3)
 				{
 					
-					c.forward = -1 * (int) (400.f * SDL_JoystickGetAxis(joy, 1)/32767.f);
-					c.right = (int) (400.f * SDL_JoystickGetAxis(joy, 0)/32767.f);
-					c.up = -1 * (int) (400.f * SDL_JoystickGetAxis(joy, 3)/32767.f);
-					c.clockwise = (int) (200.f * SDL_JoystickGetAxis(joy, 2)/32767.f);
+					joy_use.get_axis("testing");
+					joy_use.directreturn("this better work");
+
+					c.forward = -1 * (int) (400.f * joy_use.get_axis("forward")/32767.f);
+					c.right = (int) (400.f * joy_use.get_axis("right")/32767.f);
+					c.up = -1 * (int) (400.f * joy_use.get_axis("up")/32767.f);
+					c.clockwise = (int) (200.f * joy_use.get_axis("clockwise")/32767.f);
+					
 
 					elevate_magnitude = 400 - (int)(400 * ((32768 + (int)SDL_JoystickGetAxis(joy, 3))/65535.f));
 				}
@@ -379,7 +391,7 @@ int run()
 
 		show_framerate_meter();
 		
-		selector.render(&video_interface, &comm_interface, &joystick_interface);
+		selector.render(&video_interface, &comm_interface, &joystick_interface, &joy_use);
 
 		glViewport(0, 0, static_cast<int>(ImGui::GetIO().DisplaySize.x), static_cast<int>(ImGui::GetIO().DisplaySize.y));
 		glClear(GL_COLOR_BUFFER_BIT);
