@@ -150,6 +150,7 @@ int run()
 	CommInterface comm_interface;
 	JoystickInterface joystick_interface;
 	JoystickSetupInterface joy_use;
+	joy_use.setup_mappings(5);
 	ConsoleWidget console{"Chatter"};
 	Oculus oculus{"###oculus"};
 	StopwatchWidget stopwatch_widget{"###stopwatch"};
@@ -282,7 +283,6 @@ int run()
 			// SDL_Joystick* joy = SDL_JoystickOpen(joystick_interface.joystick_index);
 			joy_use.open_joystick(joystick_interface.joystick_index);
 			SDL_Joystick* joy = joy_use.sdl_joystick();
-			joy_use.setup_mappings(5);
 			
 
 			if (joy)
@@ -290,13 +290,16 @@ int run()
 				if (SDL_JoystickNumAxes(joy) > 3)
 				{
 					
-					joy_use.get_axis("testing");
-					joy_use.directreturn("this better work");
-
-					c.forward = -1 * (int) (400.f * joy_use.get_axis("forward")/32767.f);
-					c.right = (int) (400.f * joy_use.get_axis("right")/32767.f);
-					c.up = -1 * (int) (400.f * joy_use.get_axis("up")/32767.f);
-					c.clockwise = (int) (200.f * joy_use.get_axis("clockwise")/32767.f);
+					if(joy_use.axis_enabled(1))
+						c.forward = -1 * (int) (400.f * joy_use.get_axis(1)/32767.f);
+					if(joy_use.axis_enabled(0))
+						c.right = (int) (400.f * joy_use.get_axis(0)/32767.f);
+					if(joy_use.axis_enabled(3))
+						c.up = -1 * (int) (400.f * joy_use.get_axis(3)/32767.f);
+					if(joy_use.axis_enabled(2))
+						c.clockwise = (int) (200.f * joy_use.get_axis(2)/32767.f);
+					if(joy_use.axis_enabled(4))
+						c.moclaw = (int)(100.f * joy_use.get_axis(4)/32767.f);
 					
 
 					elevate_magnitude = 400 - (int)(400 * ((32768 + (int)SDL_JoystickGetAxis(joy, 3))/65535.f));

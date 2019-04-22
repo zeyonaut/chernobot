@@ -14,8 +14,9 @@ class JoystickSetupInterface
 {
     
 public:
-    std::map <string, control_mapping> joystick_mappings;
+    std::vector<control_mapping> joy_mappings;
     SDL_Joystick* joy;
+    std::string default_mappings[5] = {std::string("right"), std::string("forward"), std::string("clockwise"), std::string("gripper"), std::string("pitch")};
 
 	struct Configurator
 	{
@@ -25,11 +26,10 @@ public:
 	};
 
     void setup_mappings(int size) {
-        if(!joystick_mappings.empty())
+        if(!joy_mappings.empty())
             return;
-        string default_mappings[5] = {"right", "forward", "clockwise", "up", "moclaw"};
         for(int i = 0; i < size && i < sizeof(default_mappings); i++) {
-            joystick_mappings[default_mappings[i]] = (control_mapping){i, false};
+            joy_mappings.push_back((control_mapping){i, false});
         }
     }
 
@@ -45,21 +45,31 @@ public:
         return in;
     }
 
-    control_mapping get_mapping(string input) {
-        assert(joystick_mappings.size() > 0);
-        std::map<string, control_mapping>::iterator tr = joystick_mappings.find(input);
-        if(tr == joystick_mappings.end())
-            // TODO: return something sensible
-            return (control_mapping){0, false};
-        return tr->second;
+    control_mapping get_mapping(int id) {
+        assert(joy_mappings.size() > 0);
+        if(id >= joy_mappings.size()) {
+            return (control_mapping){-1, false};
+        }
+        return joy_mappings[id];
     }
 
-    int get_axis(string axis) {
+    int get_axis(int axis) {
         control_mapping td = get_mapping(axis);
+        if(td.axis == -1 || td.axis > SDL_JoystickNumAxes(joy)) {
+            return 0;
+        }
         int tr = SDL_JoystickGetAxis(joy, td.axis);
         if(td.rev)
             tr = -1 * tr;
         return tr;
+    }
+    
+    bool axis_enabled(int axis) {
+        control_mapping td = get_mapping(axis);
+        if(td.axis == -1 || td.axis > SDL_JoystickNumAxes(joy)) {
+            return false;
+        }
+        return true;
     }
 
 	Configurator make_configurator()
@@ -68,16 +78,18 @@ public:
 		{
 			[&]
 			{
-                ImGui::BeginChild("Setup");
+                for(int i = 0; i < sizeof(default_mappings)/sizeof(*default_mappings); i++) {
+                    std::string to_print = "Axis " + std::to_string(i) + " is "+ default_mappings[i];
+                    ImGui::Text(to_print.c_str());
+                }
+                ImGui::NewLine();
+				for(int i = 0; i < joy_mappings.size(); i++) {
+                    ImGui::Text(("Axis " + std::to_string(i)).c_str());
 
-				for(std::map<string, control_mapping>::iterator it = joystick_mappings.begin(); it != joystick_mappings.end(); it++) {
-                    ImGui::Text((it->first).c_str());
-                    control_mapping curr = it->second;
-                    ImGui::InputInt("Mapping", &(curr.axis));
+                    ImGui::InputInt(std::string("Mapping##").append(std::to_string(i)).c_str(), &(joy_mappings.at(i).axis), 1);
                     ImGui::SameLine();
-                    ImGui::Checkbox("Reverse", &(curr.rev));
+                    ImGui::Checkbox(std::string("Reverse##").append(std::to_string(i)).c_str(), &(joy_mappings.at(i).rev));
                 }	
-                ImGui::EndChild();
 			},
 			[&]
 			{
