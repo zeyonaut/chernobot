@@ -95,7 +95,7 @@ int run()
 		ImGui::CreateContext();
 		//ImGui_ImplSdlGL3_Init(window.sdl_window());
 		ImGui_ImplSDL2_InitForOpenGL(window.sdl_window(), window.gl_context());
-    	ImGui_ImplOpenGL3_Init("#version 150");
+		ImGui_ImplOpenGL3_Init("#version 150");
 
 		ImGui::StyleColorsDark();
 		ImGuiStyle& style = ImGui::GetStyle();
@@ -151,6 +151,7 @@ int run()
 	JoystickInterface joystick_interface;
 	JoystickSetupInterface joy_use;
 	joy_use.setup_mappings(5);
+	
 	ConsoleWidget console{"Chatter"};
 	Oculus oculus{"###oculus"};
 	StopwatchWidget stopwatch_widget{"###stopwatch"};
@@ -284,7 +285,6 @@ int run()
 			joy_use.open_joystick(joystick_interface.joystick_index);
 			SDL_Joystick* joy = joy_use.sdl_joystick();
 			
-
 			if (joy)
 			{
 				if (SDL_JoystickNumAxes(joy) > 3)

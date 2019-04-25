@@ -13,7 +13,7 @@ struct ConsoleWidget
 		if (history.size() > 512 + 128) history.erase(history.begin(), history.begin() + 128);
 
 		ImGui::SetNextWindowSize(ImVec2(600,240), ImGuiCond_FirstUseEver);
-        if (ImGui::Begin(this->title.c_str(), p_open))
+		if (ImGui::Begin(this->title.c_str(), p_open))
 		{
 			ImGui::Checkbox("Should Autoscroll", &should_autoscroll);
 			ImGui::BeginChild("Log", ImVec2(0, 0), false, ImGuiWindowFlags_HorizontalScrollbar);
